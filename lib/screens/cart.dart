@@ -110,7 +110,7 @@ class _CartScreenState extends State<CartScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Row(children: [
-                      Thumb(product: i.product, cat: '${sh['cat']}', size: 52),
+                      ItemThumb(product: i.product, cat: '${sh['cat']}', size: 52),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

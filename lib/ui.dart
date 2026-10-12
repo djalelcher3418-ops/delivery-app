@@ -195,11 +195,11 @@ class QtyStepper extends StatelessWidget {
   }
 }
 
-class Thumb extends StatelessWidget {
+class ItemThumb extends StatelessWidget {
   final Doc product;
   final String cat;
   final double size;
-  const Thumb({super.key, required this.product, required this.cat, this.size = 88});
+  const ItemThumb({super.key, required this.product, required this.cat, this.size = 88});
 
   @override
   Widget build(BuildContext context) {

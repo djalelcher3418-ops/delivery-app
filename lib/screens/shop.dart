@@ -266,7 +266,7 @@ class _ProductTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         onTap: off ? null : () => openProductSheet(context, p),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Thumb(product: p, cat: cat, size: 92),
+          ItemThumb(product: p, cat: cat, size: 92),
           const SizedBox(width: 12),
           Expanded(
             child: SizedBox(
