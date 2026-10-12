@@ -41,7 +41,7 @@ ThemeData buildTheme(Brightness b) {
     surface: dark ? const Color(0xFF17201C) : Colors.white,
   );
   final base = ThemeData(useMaterial3: true, colorScheme: scheme, brightness: b);
-  final text = GoogleFonts.getTextTheme('IBM Plex Sans Arabic', base.textTheme);
+  final text = base.textTheme.apply(fontFamily: GoogleFonts.getFont('IBM Plex Sans Arabic').fontFamily);
   return base.copyWith(
     scaffoldBackgroundColor: dark ? const Color(0xFF0E1512) : const Color(0xFFF4F6F5),
     textTheme: text.copyWith(
