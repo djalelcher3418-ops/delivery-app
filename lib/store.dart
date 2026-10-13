@@ -196,6 +196,7 @@ class AppState extends ChangeNotifier {
   final Map<String, String> _lastState = {};
   final Map<String, int> _lastMsgN = {};
   final Map<String, int> _lastPrepAt = {};
+  final Set<String> _nearAlerted = {}; // طلبات نُبّه فيها الزبون أن الموصّل قريب
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -340,6 +341,15 @@ class AppState extends ChangeNotifier {
           notify.update('order:$id', '${orderTitle(o)} · طلب ${o['no'] ?? ''}', msg, 'track:$id');
         }
         _lastPrepAt[id] = pa;
+        // الموصّل على بعد 400 م أو أقل من عنوان الزبون
+        if (o['status'] == 'road' && o['cAt'] != null && nowMs() - asInt(o['cAt']) < 3 * 60000) {
+          final d = km(asD(o['cLat']), asD(o['cLng']), asD(o['custLat']), asD(o['custLng']));
+          if (d != null && d <= 0.4 && _nearAlerted.add(id) && !firstLoad) {
+            final msg = 'الموصّل قريب منك (${d < 0.1 ? 'عند الباب تقريباً' : '${(d * 1000).round()} م'}). جهّز ${money(asInt(o['total']))}.';
+            toast(msg);
+            notify.update('order:$id', '${orderTitle(o)} · طلب ${o['no'] ?? ''}', msg, 'track:$id');
+          }
+        }
       }
       notifyListeners();
     }, onError: _onErr));
