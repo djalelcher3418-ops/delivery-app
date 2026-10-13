@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'notify.dart';
+import 'screens/chat.dart';
 import 'screens/shell.dart';
+import 'screens/track.dart';
 import 'screens/welcome.dart';
 import 'store.dart';
 import 'ui.dart';
@@ -19,6 +22,7 @@ const firebaseOptions = FirebaseOptions(
 );
 
 final messengerKey = GlobalKey<ScaffoldMessengerState>();
+final navKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,8 +33,21 @@ Future<void> main() async {
     s.hideCurrentSnackBar();
     s.showSnackBar(SnackBar(content: Text(m), behavior: SnackBarBehavior.floating));
   };
+  notify.onOpen = _openFromNotification;
+  await notify.init();
   await app.init();
   runApp(const DeliveryApp());
+}
+
+// الضغط على إشعار يفتح متابعة الطلب أو المحادثة مع الموصّل
+void _openFromNotification(String payload) {
+  final nav = navKey.currentState;
+  final i = payload.indexOf(':');
+  if (nav == null || i < 0 || app.user == null) return;
+  final kind = payload.substring(0, i), id = payload.substring(i + 1);
+  nav.popUntil((r) => r.isFirst);
+  nav.push(MaterialPageRoute(builder: (_) => TrackScreen(orderId: id)));
+  if (kind == 'chat') nav.push(MaterialPageRoute(builder: (_) => ChatScreen(orderId: id)));
 }
 
 ThemeData buildTheme(Brightness b) {
@@ -88,6 +105,7 @@ class DeliveryApp extends StatelessWidget {
       title: 'Delivery',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: messengerKey,
+      navigatorKey: navKey,
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
       localizationsDelegates: const [

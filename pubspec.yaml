@@ -20,6 +20,7 @@ dependencies:
   latlong2: any
   geolocator: '>=12.0.0 <15.0.0'
   url_launcher: any
+  flutter_local_notifications: '>=22.0.0 <23.0.0'
 
 dev_dependencies:
   flutter_launcher_icons: any

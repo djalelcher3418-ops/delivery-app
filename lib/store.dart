@@ -2,13 +2,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'notify.dart';
 
 typedef Doc = Map<String, dynamic>;
 
@@ -321,11 +321,13 @@ class AppState extends ChangeNotifier {
         final st = '${o['status']}|${o['courierUid'] ?? ''}';
         if (!firstLoad && _lastState[id] != null && _lastState[id] != st) {
           toast('طلب ${o['no'] ?? ''}: ${headOf(o)}');
+          notify.update('order:$id', '${orderTitle(o)} · طلب ${o['no'] ?? ''}', headOf(o), 'track:$id');
         }
         _lastState[id] = st;
         final n = asInt(o['msgN']);
         if (!firstLoad && _lastMsgN[id] != null && n > _lastMsgN[id]! && o['lastMsgBy'] == 'courier' && openChatId != id) {
           toast('رسالة من الموصّل: ${o['lastMsgText'] ?? ''}');
+          notify.update('chat:$id', 'رسالة من الموصّل · طلب ${o['no'] ?? ''}', '${o['lastMsgText'] ?? ''}', 'chat:$id');
         }
         _lastMsgN[id] = n;
       }
@@ -691,6 +693,7 @@ class AppState extends ChangeNotifier {
     save();
     notifyListeners();
     toast('أُرسل طلبك رقم $n إلى ${sh['name']}');
+    notify.requestPermission(); // لنخبرك بحالة طلبك والتطبيق مغلق
     return ref.id;
   }
 
@@ -736,6 +739,7 @@ class AppState extends ChangeNotifier {
     save();
     notifyListeners();
     toast('أُرسل طلبك رقم $n للموصّلين');
+    notify.requestPermission();
     return ref.id;
   }
 
