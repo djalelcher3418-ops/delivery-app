@@ -195,6 +195,7 @@ class AppState extends ChangeNotifier {
   final Set<String> _imgLoading = {};
   final Map<String, String> _lastState = {};
   final Map<String, int> _lastMsgN = {};
+  final Map<String, int> _lastPrepAt = {};
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -330,6 +331,15 @@ class AppState extends ChangeNotifier {
           notify.update('chat:$id', 'رسالة من الموصّل · طلب ${o['no'] ?? ''}', '${o['lastMsgText'] ?? ''}', 'chat:$id');
         }
         _lastMsgN[id] = n;
+        // المحل طلب وقتاً إضافياً للتحضير (أخّر وقت بدء التحضير)
+        final pa = asInt(o['prepAt']), wasPa = _lastPrepAt[id];
+        if (!firstLoad && wasPa != null && wasPa > 0 && pa - wasPa > 60000 && o['status'] == 'prep') {
+          final eta = etaMin(o);
+          final msg = 'يحتاج ${o['shopName'] ?? 'المحل'} وقتاً إضافياً لتحضير طلبك${eta == null ? '' : ' · يصلك بعد ~$eta د'}';
+          toast(msg);
+          notify.update('order:$id', '${orderTitle(o)} · طلب ${o['no'] ?? ''}', msg, 'track:$id');
+        }
+        _lastPrepAt[id] = pa;
       }
       notifyListeners();
     }, onError: _onErr));
