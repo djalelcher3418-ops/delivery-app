@@ -187,6 +187,7 @@ class AppState extends ChangeNotifier {
   String? cartShop;
   Map<String, int> seen = {};
   String anyFrom = '', anyText = '', anyBudget = '';
+  List<Map<String, dynamic>> places = []; // عناوين محفوظة: {label, zoneId, addr, lat, lng}
 
   void Function(String msg)? onToast;
   String? openChatId; // the chat currently on screen
@@ -224,6 +225,8 @@ class AppState extends ChangeNotifier {
         anyFrom = m['anyFrom'] ?? '';
         anyText = m['anyText'] ?? '';
         anyBudget = m['anyBudget'] ?? '';
+        final pl = m['places'];
+        if (pl is List) places = pl.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).toList();
       } catch (_) {}
     }
     auth.authStateChanges().listen((u) {
@@ -253,6 +256,7 @@ class AppState extends ChangeNotifier {
           'anyFrom': anyFrom,
           'anyText': anyText,
           'anyBudget': anyBudget,
+          'places': places,
         }));
   }
 
@@ -585,6 +589,45 @@ class AppState extends ChangeNotifier {
     save();
     await auth.signOut();
   }
+
+  static const maxPlaces = 5;
+
+  /// يحفظ العنوان الحالي باسم (البيت، العمل…). نفس الاسم يستبدل القديم.
+  String savePlace(String label) {
+    final l = label.trim();
+    if (l.isEmpty) return 'اكتب اسماً للعنوان.';
+    if (zoneId.isEmpty || addr.trim().isEmpty) return 'اختر الحي واكتب وصف العنوان أولاً.';
+    final p = {'label': l.length > 20 ? l.substring(0, 20) : l, 'zoneId': zoneId, 'addr': addr.trim(), 'lat': lat, 'lng': lng};
+    final i = places.indexWhere((x) => x['label'] == p['label']);
+    if (i >= 0) {
+      places[i] = p;
+    } else {
+      if (places.length >= maxPlaces) return 'يمكنك حفظ $maxPlaces عناوين فقط. احذف واحداً أولاً.';
+      places.add(p);
+    }
+    save();
+    notifyListeners();
+    toast('حُفظ العنوان «${p['label']}»');
+    return '';
+  }
+
+  void usePlace(Map<String, dynamic> p) {
+    zoneId = '${p['zoneId'] ?? ''}';
+    addr = '${p['addr'] ?? ''}';
+    lat = asD(p['lat']);
+    lng = asD(p['lng']);
+    save();
+    notifyListeners();
+  }
+
+  void deletePlace(Map<String, dynamic> p) {
+    places.remove(p);
+    save();
+    notifyListeners();
+  }
+
+  /// هل العنوان الحالي هو هذا العنوان المحفوظ؟
+  bool isPlace(Map<String, dynamic> p) => p['zoneId'] == zoneId && p['addr'] == addr.trim();
 
   void setZone(String id) {
     zoneId = id;
