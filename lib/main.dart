@@ -8,6 +8,7 @@ import 'screens/chat.dart';
 import 'screens/shell.dart';
 import 'screens/track.dart';
 import 'screens/welcome.dart';
+import 'status_bar.dart';
 import 'store.dart';
 import 'ui.dart';
 
@@ -27,6 +28,7 @@ final navKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: firebaseOptions);
+  status.start();
   app.onToast = (m) {
     final s = messengerKey.currentState;
     if (s == null) return;
@@ -105,6 +107,7 @@ class DeliveryApp extends StatelessWidget {
       title: 'Delivery',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: messengerKey,
+      builder: (context, child) => StatusBars(child: child ?? const SizedBox.shrink()),
       navigatorKey: navKey,
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
