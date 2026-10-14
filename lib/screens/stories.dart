@@ -301,3 +301,66 @@ class _StoryViewerState extends State<StoryViewer> with SingleTickerProviderStat
     );
   }
 }
+
+/// «إعلانات المحلات» في الصفحة الرئيسية: أحدث الإعلانات من كل المحلات، الضغط يفتح المحل
+class AdsRow extends StatelessWidget {
+  const AdsRow({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final ads = app.allAds;
+    if (ads.isEmpty) return const SizedBox.shrink();
+    final hint = Theme.of(context).hintColor;
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text('إعلانات المحلات', style: Theme.of(context).textTheme.titleMedium),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 206,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: ads.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, i) {
+              final s = ads[i].shop, ad = ads[i].ad;
+              final img = app.postImage(ad);
+              final c = catOf(s['cat']);
+              return SizedBox(
+                width: 250,
+                child: Box(
+                  padding: EdgeInsets.zero,
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShopScreen(shopId: '${s['id']}'))),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                      child: SizedBox(
+                        height: 110,
+                        child: img != null
+                            ? Image.memory(img, fit: BoxFit.cover, gaplessPlayback: true)
+                            : ColoredBox(color: c.bg, child: Icon(Icons.campaign_rounded, color: c.fg, size: 44)),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: Text('${s['name']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 2, 12, 0),
+                      child: Text('${ad['text'] ?? ''}',
+                          maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: hint, fontSize: 13, height: 1.35)),
+                    ),
+                  ]),
+                ),
+              );
+            },
+          ),
+        ),
+      ]),
+    );
+  }
+}

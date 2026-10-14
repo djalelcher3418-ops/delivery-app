@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'notify.dart';
 import 'screens/chat.dart';
 import 'screens/shell.dart';
+import 'screens/stories.dart';
 import 'screens/track.dart';
 import 'screens/welcome.dart';
 import 'status_bar.dart';
@@ -50,6 +51,11 @@ void _openFromNotification(String payload) {
   if (nav == null || i < 0 || app.user == null) return;
   final kind = payload.substring(0, i), id = payload.substring(i + 1);
   nav.popUntil((r) => r.isFirst);
+  if (kind == 'story') {
+    final s = app.shop(id);
+    if (s != null) nav.push(MaterialPageRoute(builder: (_) => StoryViewer(shopIds: [id])));
+    return;
+  }
   nav.push(MaterialPageRoute(builder: (_) => TrackScreen(orderId: id)));
   if (kind == 'chat') nav.push(MaterialPageRoute(builder: (_) => ChatScreen(orderId: id)));
 }

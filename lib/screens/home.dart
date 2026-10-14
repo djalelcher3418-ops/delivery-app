@@ -211,6 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          if (!filtered) const SliverToBoxAdapter(child: AdsRow()),
           ..._body(filtered),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ]);

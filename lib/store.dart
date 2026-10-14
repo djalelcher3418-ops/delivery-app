@@ -315,6 +315,7 @@ class AppState extends ChangeNotifier {
     }, onError: _onErr));
     _subs.add(fs.collection('shops').snapshots().listen((s) {
       shops = _docs(s);
+      _notifyNewStories(!shopsLoaded);
       shopsLoaded = true;
       notifyListeners();
     }, onError: _onErr));
@@ -491,6 +492,29 @@ class AppState extends ChangeNotifier {
       return last(b).compareTo(last(a));
     });
     return l;
+  }
+
+  /// كل الإعلانات النشطة من المحلات الظاهرة، الأحدث أولاً
+  List<({Doc shop, Doc ad})> get allAds {
+    final l = [
+      for (final s in visibleShops)
+        for (final a in postsOf(s, 'ad')) (shop: s, ad: a)
+    ];
+    l.sort((a, b) => asInt(b.ad['at']).compareTo(asInt(a.ad['at'])));
+    return l.take(12).toList();
+  }
+
+  // يومية جديدة من محل في المفضلة: إشعار (يظهر والتطبيق في الخلفية فقط)
+  final Set<String> _knownStories = {};
+  void _notifyNewStories(bool first) {
+    for (final s in visibleShops) {
+      for (final p in postsOf(s, 'story')) {
+        final id = '${p['id']}';
+        if (!_knownStories.add(id) || first || !favs.contains(s['id']) || seenPosts.contains(id)) continue;
+        final t = '${p['text'] ?? ''}';
+        notify.update('story:${s['id']}', 'يومية جديدة من ${s['name']}', t.isEmpty ? 'اضغط لتشاهدها' : t, 'story:${s['id']}');
+      }
+    }
   }
 
   void markPostSeen(String id) {
