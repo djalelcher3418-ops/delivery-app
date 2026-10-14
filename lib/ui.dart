@@ -332,6 +332,12 @@ class ShopCard extends StatelessWidget {
                       Text('${prep + 10}–${prep + 25} د', style: TextStyle(fontSize: 12.5, color: hint)),
                     ]),
                   if (zone != null) Text('التوصيل ${money(asInt(zone['fee']))}', style: TextStyle(fontSize: 12.5, color: hint)),
+                  if (app.distanceTo(shop) != null)
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.near_me_rounded, size: 14, color: hint),
+                      const SizedBox(width: 3),
+                      Text(kmText(app.distanceTo(shop)!), style: TextStyle(fontSize: 12.5, color: hint)),
+                    ]),
                 ]),
                 if (hits.isNotEmpty)
                   Padding(

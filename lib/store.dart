@@ -463,6 +463,9 @@ class AppState extends ChangeNotifier {
     return a.isEmpty ? null : a.first;
   }
 
+  /// المسافة من عنوان الزبون (موقعه المحفوظ) إلى المحل، أو null إذا لم يحدد أحدهما موقعه
+  double? distanceTo(Doc shop) => km(lat, lng, asD(shop['lat']), asD(shop['lng']));
+
   List<Doc> get visibleShops => shops.where((s) => s['active'] != false).toList();
 
   // ---------------- يوميات وإعلانات المحلات (الحقل posts في مستند المحل) ----------------

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -18,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String q = '';
   String cat = 'all';
+  String sort = 'best'; // best | near | rating
+  bool openOnly = false;
   final page = PageController(viewportFraction: 0.9);
   int slide = 0;
   Timer? timer;
@@ -259,6 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final rows = <MapEntry<Doc, List<Doc>>>[];
     for (final s in app.visibleShops) {
       if (cat == 'fav' ? !app.favs.contains(s['id']) : (cat != 'all' && s['cat'] != cat)) continue;
+      if (openOnly && !app.isOpen(s)) continue;
       var hits = <Doc>[];
       if (query.isNotEmpty && !'${s['name']}'.contains(query)) {
         hits = app.productsOf(s['id']).where((p) => '${p['name']}'.contains(query) || '${p['desc'] ?? ''}'.contains(query)).toList();
@@ -269,6 +273,15 @@ class _HomeScreenState extends State<HomeScreen> {
     rows.sort((a, b) {
       final o = (app.isOpen(b.key) ? 1 : 0) - (app.isOpen(a.key) ? 1 : 0);
       if (o != 0) return o;
+      if (sort == 'near') {
+        final da = app.distanceTo(a.key) ?? 999, db = app.distanceTo(b.key) ?? 999;
+        if (da != db) return da.compareTo(db);
+      }
+      if (sort == 'rating') {
+        final ra = (avgRating(a.key) ?? 0) * math.min(asInt(a.key['ratingCount']), 20);
+        final rb = (avgRating(b.key) ?? 0) * math.min(asInt(b.key['ratingCount']), 20);
+        if (ra != rb) return rb.compareTo(ra);
+      }
       final r = (avgRating(b.key) ?? 0).compareTo(avgRating(a.key) ?? 0);
       return r != 0 ? r : '${a.key['name']}'.compareTo('${b.key['name']}');
     });
@@ -281,6 +294,39 @@ class _HomeScreenState extends State<HomeScreen> {
                 : 'كل المحلات';
     final list = <Widget>[
       SliverToBoxAdapter(child: SectionTitle(title, trailing: '${rows.length} محلات')),
+      SliverToBoxAdapter(
+        child: SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              for (final o in const [('best', 'الأنسب', Icons.auto_awesome_rounded), ('near', 'الأقرب', Icons.near_me_rounded), ('rating', 'الأعلى تقييماً', Icons.star_rounded)])
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 8),
+                  child: ChoiceChip(
+                    avatar: Icon(o.$3, size: 16),
+                    label: Text(o.$2),
+                    selected: sort == o.$1,
+                    showCheckmark: false,
+                    onSelected: (_) {
+                      if (o.$1 == 'near' && app.lat == null) {
+                        app.toast('أضف موقعك في عنوان التوصيل (صفحة السلة) لنرتب المحلات حسب المسافة.');
+                        return;
+                      }
+                      setState(() => sort = o.$1);
+                    },
+                  ),
+                ),
+              FilterChip(
+                label: const Text('المفتوح الآن'),
+                selected: openOnly,
+                onSelected: (v) => setState(() => openOnly = v),
+              ),
+            ],
+          ),
+        ),
+      ),
       if (rows.isEmpty)
         SliverToBoxAdapter(
           child: EmptyState(
