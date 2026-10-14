@@ -6,6 +6,8 @@ import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'notify.dart';
@@ -355,8 +357,63 @@ class AppState extends ChangeNotifier {
           }
         }
       }
+      syncKeepAlive();
       notifyListeners();
     }, onError: _onErr));
+  }
+
+  // ---------------- البقاء متصلاً في الخلفية ----------------
+  // بدون خدمة في المقدمة يجمّد أندرويد التطبيق في الخلفية فلا تصل تنبيهات الطلب.
+  // نشغّلها (إشعار ثابت «نتابع طلبك») ما دام عند الزبون طلب جارٍ فقط.
+  StreamSubscription<Position>? _keepAlive;
+  AppLifecycleListener? _life;
+  bool _keepAliveBusy = false;
+
+  Future<void> syncKeepAlive() async {
+    _life ??= AppLifecycleListener(onResume: syncKeepAlive);
+    final need = activeOrders > 0;
+    if (!need) {
+      await _keepAlive?.cancel();
+      _keepAlive = null;
+      return;
+    }
+    if (_keepAlive != null || _keepAliveBusy || defaultTargetPlatform != TargetPlatform.android) return;
+    _keepAliveBusy = true;
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.whileInUse || perm == LocationPermission.always) {
+        _keepAlive = Geolocator.getPositionStream(
+          locationSettings: AndroidSettings(
+            accuracy: LocationAccuracy.low,
+            distanceFilter: 1000,
+            intervalDuration: const Duration(minutes: 5),
+            foregroundNotificationConfig: const ForegroundNotificationConfig(
+              notificationTitle: 'نتابع طلبك في Delivery',
+              notificationText: 'تصلك التنبيهات حتى يصل طلبك، ثم يختفي هذا الإشعار',
+              enableWakeLock: true,
+              setOngoing: true,
+            ),
+          ),
+        ).listen((_) {}, onError: (_) {
+          // مثلاً بدأ والتطبيق في الخلفية (يمنعه أندرويد): نعيد المحاولة عند فتح التطبيق
+          _keepAlive?.cancel();
+          _keepAlive = null;
+        });
+      }
+    } catch (_) {
+      _keepAlive = null;
+    }
+    _keepAliveBusy = false;
+  }
+
+  /// بعد إرسال الطلب: أذونات الإشعارات والموقع (الخدمة في الخلفية تحتاج الموقع)
+  Future<void> _afterOrder() async {
+    await notify.requestPermission();
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) await Geolocator.requestPermission();
+    } catch (_) {}
+    await syncKeepAlive();
   }
 
   // ---------------- read helpers ----------------
@@ -756,7 +813,7 @@ class AppState extends ChangeNotifier {
     save();
     notifyListeners();
     toast('أُرسل طلبك رقم $n إلى ${sh['name']}');
-    notify.requestPermission(); // لنخبرك بحالة طلبك والتطبيق مغلق
+    _afterOrder(); // لنخبرك بحالة طلبك والتطبيق في الخلفية
     return ref.id;
   }
 
@@ -802,7 +859,7 @@ class AppState extends ChangeNotifier {
     save();
     notifyListeners();
     toast('أُرسل طلبك رقم $n للموصّلين');
-    notify.requestPermission();
+    _afterOrder();
     return ref.id;
   }
 
