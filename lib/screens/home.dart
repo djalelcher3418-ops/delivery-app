@@ -6,6 +6,7 @@ import '../store.dart';
 import '../ui.dart';
 import 'shell.dart';
 import 'shop.dart';
+import 'stories.dart';
 import 'track.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -195,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+          if (!filtered) const SliverToBoxAdapter(child: StoriesRow()),
           SliverToBoxAdapter(
             child: SizedBox(
               height: 106,

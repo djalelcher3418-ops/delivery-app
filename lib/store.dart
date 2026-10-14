@@ -205,6 +205,7 @@ class AppState extends ChangeNotifier {
   Map<String, int> seen = {};
   String anyFrom = '', anyText = '', anyBudget = '';
   List<Map<String, dynamic>> places = []; // عناوين محفوظة: {label, zoneId, addr, lat, lng}
+  List<String> seenPosts = []; // يوميات شاهدها الزبون (لتلوين حلقة المحل)
 
   void Function(String msg)? onToast;
   String? openChatId; // the chat currently on screen
@@ -242,6 +243,8 @@ class AppState extends ChangeNotifier {
         anyFrom = m['anyFrom'] ?? '';
         anyText = m['anyText'] ?? '';
         anyBudget = m['anyBudget'] ?? '';
+        final sp = m['seenPosts'];
+        if (sp is List) seenPosts = sp.map((x) => '$x').toList();
         final pl = m['places'];
         if (pl is List) places = pl.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).toList();
       } catch (_) {}
@@ -274,6 +277,7 @@ class AppState extends ChangeNotifier {
           'anyText': anyText,
           'anyBudget': anyBudget,
           'places': places,
+          'seenPosts': seenPosts,
         }));
   }
 
@@ -459,6 +463,43 @@ class AppState extends ChangeNotifier {
   }
 
   List<Doc> get visibleShops => shops.where((s) => s['active'] != false).toList();
+
+  // ---------------- يوميات وإعلانات المحلات (الحقل posts في مستند المحل) ----------------
+  /// منشورات المحل التي لم تنتهِ. kind: story أو ad. اليوميات من الأقدم للأحدث، والإعلانات الأحدث أولاً.
+  List<Doc> postsOf(Doc shop, String kind) {
+    final now = nowMs();
+    final l = (shop['posts'] is List ? shop['posts'] as List : const [])
+        .whereType<Map>()
+        .map((m) => Map<String, dynamic>.from(m))
+        .where((p) => p['kind'] == kind && asInt(p['until']) > now)
+        .toList();
+    l.sort((a, b) => kind == 'story' ? asInt(a['at']).compareTo(asInt(b['at'])) : asInt(b['at']).compareTo(asInt(a['at'])));
+    return l;
+  }
+
+  Uint8List? postImage(Doc p) => image('${p['id']}', p['img'] == true, p['at']);
+
+  bool storySeen(Doc shop) => postsOf(shop, 'story').every((p) => seenPosts.contains(p['id']));
+
+  /// المحلات التي عندها يوميات اليوم: غير المشاهَدة أولاً، ثم الأحدث
+  List<Doc> get storyShops {
+    final l = visibleShops.where((s) => postsOf(s, 'story').isNotEmpty).toList();
+    int last(Doc s) => postsOf(s, 'story').map((p) => asInt(p['at'])).fold(0, math.max);
+    l.sort((a, b) {
+      final sa = storySeen(a), sb = storySeen(b);
+      if (sa != sb) return sa ? 1 : -1;
+      return last(b).compareTo(last(a));
+    });
+    return l;
+  }
+
+  void markPostSeen(String id) {
+    if (seenPosts.contains(id)) return;
+    seenPosts.add(id);
+    if (seenPosts.length > 300) seenPosts = seenPosts.sublist(seenPosts.length - 300);
+    save();
+    notifyListeners();
+  }
 
   List<Doc> productsOf(String shopId) {
     final l = products.where((p) => p['shopId'] == shopId).toList();

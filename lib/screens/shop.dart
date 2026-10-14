@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../store.dart';
 import '../ui.dart';
 import 'shell.dart';
+import 'stories.dart';
 
 class ShopScreen extends StatefulWidget {
   final String shopId;
@@ -45,6 +46,7 @@ class _ShopScreenState extends State<ShopScreen> {
         }
         final zone = app.currentZone;
         final offers = app.shopCoupons(s['id']);
+        final stories = app.postsOf(s, 'story'), ads = app.postsOf(s, 'ad');
         final ci = app.cartInfo();
         final showBar = app.cartShop == s['id'] && ci.count > 0;
         final prep = asInt(s['prepMin']) > 0 ? asInt(s['prepMin']) : 15;
@@ -118,6 +120,34 @@ class _ShopScreenState extends State<ShopScreen> {
                     child: const Text('المحل مغلق الآن. يمكنك تصفّح المنتجات، والطلب يكون عند فتحه.',
                         style: TextStyle(color: Color(0xFF8A3414), fontWeight: FontWeight.w600)),
                   ),
+                ),
+              ),
+            if (stories.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Box(
+                    onTap: () => openStories(context, [s], 0),
+                    child: Row(children: [
+                      StoryAvatar(shop: s, onTap: () => openStories(context, [s], 0), size: 48, showName: false),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          const Text('يوميات المحل اليوم', style: TextStyle(fontWeight: FontWeight.w700)),
+                          Text(app.storySeen(s) ? 'شاهدتها · اضغط لتعيدها' : 'جديد · اضغط لتشاهد',
+                              style: TextStyle(color: hint, fontSize: 13)),
+                        ]),
+                      ),
+                      const Icon(Icons.play_circle_fill_rounded, color: orange, size: 32),
+                    ]),
+                  ),
+                ),
+              ),
+            for (final ad in ads)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: _AdCard(ad: ad),
                 ),
               ),
             for (final cp in offers)
@@ -459,6 +489,47 @@ class _ProductSheetState extends State<_ProductSheet> {
           ),
         ]),
       ),
+    );
+  }
+}
+
+/// إعلان من المحل: صورة اختيارية ونص
+class _AdCard extends StatelessWidget {
+  final Doc ad;
+  const _AdCard({required this.ad});
+
+  @override
+  Widget build(BuildContext context) {
+    final img = app.postImage(ad);
+    final hint = Theme.of(context).hintColor;
+    return Box(
+      padding: EdgeInsets.zero,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (ad['img'] == true)
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: img != null
+                  ? Image.memory(img, fit: BoxFit.cover, gaplessPlayback: true)
+                  : ColoredBox(color: Theme.of(context).colorScheme.surfaceContainerHighest),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              const Pill('إعلان', bg: Color(0xFFE3ECF7), fg: info, icon: Icons.campaign_rounded),
+              const SizedBox(width: 8),
+              Text(ago(asInt(ad['at'])), style: TextStyle(color: hint, fontSize: 12)),
+            ]),
+            if ('${ad['text'] ?? ''}'.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('${ad['text']}', style: const TextStyle(fontSize: 15, height: 1.45)),
+            ],
+          ]),
+        ),
+      ]),
     );
   }
 }
