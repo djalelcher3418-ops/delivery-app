@@ -54,6 +54,21 @@ String fmt(num n) {
   return b.toString();
 }
 
+
+/// كتابة في Firestore: تُحفظ في الهاتف فوراً وتظهر في الشاشة، ثم تُرسل حين يتوفر الاتصال.
+/// لا ننتظر رد الخادم أكثر من 8 ثوانٍ حتى لا تعلق الأزرار مع الشبكة الضعيفة.
+/// ترجع true إذا أكّد الخادم، و false إذا بقيت تنتظر الاتصال.
+Future<bool> queued(Future<void> write) async {
+  try {
+    await write.timeout(const Duration(seconds: 8));
+    return true;
+  } on TimeoutException {
+    return false;
+  }
+}
+
+const pendingNote = 'سيُرسل عند عودة الاتصال';
+
 String money(num n) => '${fmt(n)} دج';
 
 String two(int n) => n.toString().padLeft(2, '0');
@@ -863,8 +878,11 @@ class AppState extends ChangeNotifier {
     return ref.id;
   }
 
-  Future<void> setStatus(String id, String status, [Map<String, dynamic>? extra]) =>
-      fs.collection('orders').doc(id).update({'status': status, 'updatedAt': FieldValue.serverTimestamp(), ...?extra});
+  Future<void> setStatus(String id, String status, [Map<String, dynamic>? extra]) async {
+    final sent = await queued(
+        fs.collection('orders').doc(id).update({'status': status, 'updatedAt': FieldValue.serverTimestamp(), ...?extra}));
+    if (!sent) toast(pendingNote);
+  }
 
   Future<void> rate(Doc o, int shopStars, int courierStars, String comment) async {
     final b = fs.batch();
@@ -912,7 +930,7 @@ class AppState extends ChangeNotifier {
       'lastMsgBy': 'customer',
       'lastMsgText': msg.length > 80 ? msg.substring(0, 80) : msg,
     });
-    await b.commit();
+    if (!await queued(b.commit())) toast('الرسالة $pendingNote');
   }
 
   void markSeen(String orderId) {
