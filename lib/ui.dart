@@ -259,6 +259,7 @@ class ShopCard extends StatelessWidget {
     final zone = app.currentZone;
     final prep = asInt(shop['prepMin']) > 0 ? asInt(shop['prepMin']) : 15;
     final hint = Theme.of(context).hintColor;
+    final dist = mini ? null : app.distanceTo(shop);
     return Container(
       width: mini ? 220 : null,
       decoration: BoxDecoration(
@@ -332,11 +333,11 @@ class ShopCard extends StatelessWidget {
                       Text('${prep + 10}–${prep + 25} د', style: TextStyle(fontSize: 12.5, color: hint)),
                     ]),
                   if (zone != null) Text('التوصيل ${money(asInt(zone['fee']))}', style: TextStyle(fontSize: 12.5, color: hint)),
-                  if (app.distanceTo(shop) != null)
+                  if (!mini && dist != null)
                     Row(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.near_me_rounded, size: 14, color: hint),
                       const SizedBox(width: 3),
-                      Text(kmText(app.distanceTo(shop)!), style: TextStyle(fontSize: 12.5, color: hint)),
+                      Text(kmText(dist), style: TextStyle(fontSize: 12.5, color: hint)),
                     ]),
                 ]),
                 if (hits.isNotEmpty)

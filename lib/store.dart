@@ -288,6 +288,9 @@ class AppState extends ChangeNotifier {
       s.cancel();
     }
     _subs.clear();
+    // تسجيل الخروج يوقف خدمة «نتابع طلبك» وإشعارها الثابت
+    _keepAlive?.cancel();
+    _keepAlive = null;
     zones = [];
     shops = [];
     products = [];

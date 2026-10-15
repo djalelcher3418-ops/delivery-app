@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -260,6 +259,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final query = q.trim();
     final rows = <MapEntry<Doc, List<Doc>>>[];
+    // «الأقرب» بلا موقع محفوظ (حذفه الزبون مثلاً) يرجع إلى «الأنسب»
+    final effSort = sort == 'near' && app.lat == null ? 'best' : sort;
+    final dist = <String, double>{};
+    double distOf(Doc s) => dist.putIfAbsent('${s['id']}', () => app.distanceTo(s) ?? 999);
+    // ترتيب «بايزي»: المتوسط مسحوب نحو 4 بقدر قلة التقييمات، فلا يتقدم محل بتقييم واحد ولا محل كثير التقييمات الضعيفة
+    double score(Doc s) => (asInt(s['ratingSum']) + 5 * 4.0) / (asInt(s['ratingCount']) + 5);
     for (final s in app.visibleShops) {
       if (cat == 'fav' ? !app.favs.contains(s['id']) : (cat != 'all' && s['cat'] != cat)) continue;
       if (openOnly && !app.isOpen(s)) continue;
@@ -273,13 +278,12 @@ class _HomeScreenState extends State<HomeScreen> {
     rows.sort((a, b) {
       final o = (app.isOpen(b.key) ? 1 : 0) - (app.isOpen(a.key) ? 1 : 0);
       if (o != 0) return o;
-      if (sort == 'near') {
-        final da = app.distanceTo(a.key) ?? 999, db = app.distanceTo(b.key) ?? 999;
+      if (effSort == 'near') {
+        final da = distOf(a.key), db = distOf(b.key);
         if (da != db) return da.compareTo(db);
       }
-      if (sort == 'rating') {
-        final ra = (avgRating(a.key) ?? 0) * math.min(asInt(a.key['ratingCount']), 20);
-        final rb = (avgRating(b.key) ?? 0) * math.min(asInt(b.key['ratingCount']), 20);
+      if (effSort == 'rating') {
+        final ra = score(a.key), rb = score(b.key);
         if (ra != rb) return rb.compareTo(ra);
       }
       final r = (avgRating(b.key) ?? 0).compareTo(avgRating(a.key) ?? 0);
@@ -307,7 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ChoiceChip(
                     avatar: Icon(o.$3, size: 16),
                     label: Text(o.$2),
-                    selected: sort == o.$1,
+                    selected: effSort == o.$1,
                     showCheckmark: false,
                     onSelected: (_) {
                       if (o.$1 == 'near' && app.lat == null) {
@@ -327,7 +331,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      if (rows.isEmpty)
+      if (rows.isEmpty && openOnly && app.visibleShops.isNotEmpty)
+        SliverToBoxAdapter(
+          child: EmptyState(
+            icon: Icons.nightlight_round,
+            title: 'لا توجد محلات مفتوحة الآن',
+            text: 'المرشّح «المفتوح الآن» مفعّل. ألغِه لترى كل المحلات وتطلب عند فتحها.',
+            action: OutlinedButton(onPressed: () => setState(() => openOnly = false), child: const Text('اعرض كل المحلات')),
+          ),
+        )
+      else if (rows.isEmpty)
         SliverToBoxAdapter(
           child: EmptyState(
             icon: Icons.search_off_rounded,
