@@ -507,7 +507,10 @@ class _ProductSheetState extends State<_ProductSheet> {
                           }
                         : null,
                     child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Text(needSize && size.isEmpty ? 'اختر الحجم أولاً' : 'أضف إلى السلة · ${money(unit * qty)}'),
+                      Flexible(
+                        child: Text(needSize && size.isEmpty ? 'اختر الحجم أولاً' : 'أضف · ${money(unit * qty)}',
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
                       if (!(needSize && size.isEmpty)) ...[const SizedBox(width: 8), const Icon(Icons.arrow_forward_rounded, size: 20)],
                     ]),
                   ),
