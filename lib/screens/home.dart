@@ -80,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _slideBox({required Widget child, VoidCallback? onTap}) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(26),
           child: Material(child: InkWell(onTap: onTap, child: child)),
         ),
       );
@@ -103,9 +103,9 @@ class _HomeScreenState extends State<HomeScreen> {
               if (cta.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                  child: Text(cta, style: const TextStyle(color: brandDark, fontWeight: FontWeight.w700, fontSize: 13)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(30)),
+                  child: Text(cta, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
                 ),
               ],
             ]),
@@ -125,55 +125,85 @@ class _HomeScreenState extends State<HomeScreen> {
         final Doc? live = app.orders.cast<Doc?>().firstWhere((o) => activeStatuses.contains(o!['status']), orElse: () => null);
         return CustomScrollView(slivers: [
           SliverToBoxAdapter(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: heroGradient,
-                borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
-              ),
-              padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 12, 16, 20),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 12, 4),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Icon(Icons.location_on_outlined, color: Colors.white),
-                  const SizedBox(width: 6),
                   Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('التوصيل إلى', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                      if (zones.isEmpty)
-                        const Text('لا توجد أحياء بعد', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700))
-                      else
-                        DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: zone?['id'],
-                            isDense: true,
-                            dropdownColor: brandDark,
-                            iconEnabledColor: Colors.white,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
-                            items: [for (final z in zones) DropdownMenuItem(value: z['id'] as String, child: Text('${z['name']}'))],
-                            onChanged: (v) {
-                              if (v != null) app.setZone(v);
-                            },
-                          ),
-                        ),
+                    child: Row(children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: const BoxDecoration(color: mint, shape: BoxShape.circle),
+                        child: const Icon(Icons.location_on_rounded, color: brandDark, size: 20),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('التوصيل إلى', style: TextStyle(color: Theme.of(context).hintColor, fontSize: 12)),
+                          if (zones.isEmpty)
+                            const Text('لا توجد أحياء بعد', style: TextStyle(fontWeight: FontWeight.w700))
+                          else
+                            DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: zone?['id'],
+                                isDense: true,
+                                borderRadius: BorderRadius.circular(16),
+                                style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15),
+                                items: [for (final z in zones) DropdownMenuItem(value: z['id'] as String, child: Text('${z['name']}'))],
+                                onChanged: (v) {
+                                  if (v != null) app.setZone(v);
+                                },
+                              ),
+                            ),
+                        ]),
+                      ),
                     ]),
+                  ),
+                  IconButton(
+                    tooltip: 'السلة',
+                    onPressed: () => tab.value = 3,
+                    icon: Badge(
+                      isLabelVisible: app.cartCount > 0,
+                      label: Text('${app.cartCount}'),
+                      child: const Icon(Icons.shopping_cart_outlined),
+                    ),
                   ),
                   IconButton(
                     tooltip: 'الخروج',
                     onPressed: () => _logout(context),
-                    icon: const Icon(Icons.logout_rounded, color: Colors.white),
+                    icon: Icon(Icons.logout_rounded, color: Theme.of(context).hintColor),
                   ),
                 ]),
+                const SizedBox(height: 16),
+                Text.rich(
+                  TextSpan(children: [
+                    const TextSpan(text: 'أهلاً'),
+                    if (app.name.isNotEmpty) TextSpan(text: '، ${app.name.split(' ').first}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                  ]),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w500),
+                ),
+                Text('ماذا نوصل لك اليوم؟', style: TextStyle(color: Theme.of(context).hintColor, fontSize: 14.5)),
                 const SizedBox(height: 14),
-                Text(app.name.isNotEmpty ? 'أهلاً ${app.name.split(' ').first}، ماذا نوصل لك اليوم؟' : 'ماذا نوصل لك اليوم؟',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white)),
-                const SizedBox(height: 14),
-                TextField(
-                  onChanged: (v) => setState(() => q = v),
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: 'ابحث عن محل أو أكلة أو منتج',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 8),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(30), boxShadow: softShadow(context)),
+                    child: TextField(
+                      onChanged: (v) => setState(() => q = v),
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        hintText: 'ابحث عن محل أو أكلة أو منتج',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: brand, width: 1.5)),
+                      ),
+                    ),
                   ),
                 ),
               ]),
@@ -202,14 +232,14 @@ class _HomeScreenState extends State<HomeScreen> {
           if (!filtered) const SliverToBoxAdapter(child: StoriesRow()),
           SliverToBoxAdapter(
             child: SizedBox(
-              height: 106,
+              height: 52,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
                 children: [
-                  _catBtn('all', 'الكل', Icons.grid_view_rounded, const Color(0xFFEEF2F0), const Color(0xFF14201B)),
-                  for (final c in catList) _catBtn(c.id, c.label, c.icon, c.bg, c.fg),
-                  if (app.favs.isNotEmpty) _catBtn('fav', 'المفضلة', Icons.favorite_rounded, const Color(0xFFFFE4DA), const Color(0xFFC2410C)),
+                  _catBtn('all', 'الكل'),
+                  for (final c in catList) _catBtn(c.id, c.label),
+                  if (app.favs.isNotEmpty) _catBtn('fav', 'المفضلة ♥'),
                 ],
               ),
             ),
@@ -222,34 +252,34 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _catBtn(String id, String label, IconData icon, Color bg, Color fg) {
+  /// تبويب نصي يتحته خط أخضر عند اختياره (مثل ALL · FAST FOOD في التصميم)
+  Widget _catBtn(String id, String label) {
     final on = cat == id;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => setState(() => cat = id),
-        child: SizedBox(
-          width: 72,
-          child: Column(children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                color: on ? brand : (dark ? fg.withValues(alpha: 0.25) : bg),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Icon(icon, color: on ? Colors.white : (dark ? Colors.white : fg), size: 28),
+    final hint = Theme.of(context).hintColor;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => setState(() => cat = id),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 180),
+            style: TextStyle(
+              fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+              fontSize: 14.5,
+              fontWeight: on ? FontWeight.w800 : FontWeight.w500,
+              color: on ? Theme.of(context).colorScheme.onSurface : hint,
             ),
-            const SizedBox(height: 5),
-            Text(label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 12, fontWeight: on ? FontWeight.w700 : FontWeight.w500, color: on ? brand : null)),
-          ]),
-        ),
+            child: Text(label),
+          ),
+          const SizedBox(height: 5),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: on ? 22 : 0,
+            height: 3,
+            decoration: BoxDecoration(color: brand, borderRadius: BorderRadius.circular(2)),
+          ),
+        ]),
       ),
     );
   }
@@ -350,6 +380,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final slides = _slides();
     final offers = app.liveCoupons;
+    // منتجات بصور من محلات مفتوحة؛ المقصوصة الخلفية أولاً، والترتيب يتغير كل يوم
+    final day = DateTime.now().difference(DateTime(2026)).inDays;
+    final openIds = app.visibleShops.where(app.isOpen).map((s) => s['id']).toSet();
+    final picks = app.products
+        .where((p) => p['hasImg'] == true && p['available'] == true && openIds.contains(p['shopId']))
+        .toList()
+      ..sort((a, b) {
+        final c = (b['cut'] == true ? 1 : 0) - (a['cut'] == true ? 1 : 0);
+        if (c != 0) return c;
+        return ('${a['id']}$day'.hashCode & 0xffff).compareTo('${b['id']}$day'.hashCode & 0xffff);
+      });
+    if (picks.length > 10) picks.removeRange(10, picks.length);
     final top = app.visibleShops.where((s) => asInt(s['ratingCount']) >= 1).toList()
       ..sort((a, b) => (avgRating(b) ?? 0).compareTo(avgRating(a) ?? 0));
     return [
@@ -376,6 +418,21 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
         ]),
       ),
+      if (picks.isNotEmpty) ...[
+        const SliverToBoxAdapter(child: SectionTitle('مقترحات لك')),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: 262,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+              itemCount: picks.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemBuilder: (_, i) => ProductCard(p: picks[i]),
+            ),
+          ),
+        ),
+      ],
       if (offers.isNotEmpty) ...[
         const SliverToBoxAdapter(child: SectionTitle('عروض وخصومات')),
         SliverToBoxAdapter(
@@ -490,4 +547,70 @@ class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
           ),
         ),
       );
+}
+
+
+/// بطاقة منتج بنمط التصميم: صورة كبيرة في دائرة نعناعية تبرز فوق البطاقة
+class ProductCard extends StatelessWidget {
+  final Doc p;
+  const ProductCard({super.key, required this.p});
+
+  @override
+  Widget build(BuildContext context) {
+    final shop = app.shop(p['shopId']);
+    final hint = Theme.of(context).hintColor;
+    void open() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShopScreen(shopId: p['shopId'])));
+    return SizedBox(
+      width: 172,
+      child: Stack(clipBehavior: Clip.none, children: [
+        Positioned.fill(
+          top: 52,
+          child: Material(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(26),
+            elevation: 0,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(26),
+              onTap: () => openProductSheet(context, p),
+              child: Container(
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), boxShadow: softShadow(context)),
+                padding: const EdgeInsets.fromLTRB(14, 86, 14, 12),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('${p['name']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
+                  InkWell(
+                    onTap: open,
+                    child: Text('${shop?['name'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: hint)),
+                  ),
+                  const Spacer(),
+                  Row(children: [
+                    Expanded(
+                      child: Text('${optList(p['sizes']).isNotEmpty ? 'من ' : ''}${money(basePrice(p))}',
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: brand)),
+                    ),
+                    Material(
+                      color: ink,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () => addProduct(context, p),
+                        child: const SizedBox(width: 34, height: 34, child: Icon(Icons.add_rounded, color: Colors.white, size: 20)),
+                      ),
+                    ),
+                  ]),
+                ]),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: IgnorePointer(child: ItemThumb(product: p, cat: '${shop?['cat'] ?? ''}', size: 132)),
+          ),
+        ),
+      ]),
+    );
+  }
 }
