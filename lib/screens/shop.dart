@@ -287,7 +287,7 @@ class _ProductTile extends StatelessWidget {
         tooltip: 'أضف ${p['name']}',
         onPressed: open ? () => addProduct(context, p) : null,
         icon: const Icon(Icons.add_rounded),
-        style: IconButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
+        style: IconButton.styleFrom(backgroundColor: ink, foregroundColor: Colors.white, shape: const CircleBorder()),
       );
     }
     return Opacity(
@@ -296,14 +296,14 @@ class _ProductTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         onTap: off ? null : () => openProductSheet(context, p),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          ItemThumb(product: p, cat: cat, size: 92),
+          ItemThumb(product: p, cat: cat, size: 96),
           const SizedBox(width: 12),
           Expanded(
             child: SizedBox(
-              height: 92,
+              height: 96,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(child: Text('${p['name']}', style: const TextStyle(fontWeight: FontWeight.w700))),
+                  Expanded(child: Text('${p['name']}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15))),
                   if (n > 0)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
@@ -317,7 +317,7 @@ class _ProductTile extends StatelessWidget {
                 Row(children: [
                   Expanded(
                     child: Text('${optList(p['sizes']).isNotEmpty ? 'من ' : ''}${money(basePrice(p))}',
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                        style: const TextStyle(fontWeight: FontWeight.w800, color: brand, fontSize: 15)),
                   ),
                   right,
                 ]),
@@ -402,6 +402,8 @@ class _ProductSheetState extends State<_ProductSheet> {
     final can = open && p['available'] == true && (!needSize || size.isNotEmpty);
     final img = app.productImage(p);
     final hint = Theme.of(context).hintColor;
+    final prep = asInt(s?['prepMin']) > 0 ? asInt(s?['prepMin']) : 15;
+    final rating = s == null ? null : avgRating(s);
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: ConstrainedBox(
@@ -409,14 +411,37 @@ class _ProductSheetState extends State<_ProductSheet> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Flexible(
             child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(18, 0, 18, 8), children: [
-              if (img != null)
-                ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.memory(img, height: 200, fit: BoxFit.cover)),
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(child: Text('${p['name']}', style: Theme.of(context).textTheme.titleLarge)),
+              const SizedBox(height: 4),
+              // رأس المنتج مثل صفحة «Yummy! Noodles»: الاسم والسعر بالأخضر، معلومات صغيرة، وصورة كبيرة في دائرة
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                  child: Text('${p['name']}',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, height: 1.2)),
+                ),
+                const SizedBox(width: 10),
                 Text(money(needSize && size.isEmpty ? basePrice(p) : linePrice(p, size, const [])),
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: brand)),
               ]),
+              const SizedBox(height: 14),
+              Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  _Stat('${prep + 10}–${prep + 25} د', 'التوصيل'),
+                  const SizedBox(height: 14),
+                  _Stat(rating != null ? rating.toStringAsFixed(1) : 'جديد', 'التقييم'),
+                  const SizedBox(height: 14),
+                  _Stat('${s?['name'] ?? ''}', 'المحل'),
+                ]),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: ItemThumb(product: p, cat: '${s?['cat'] ?? ''}', size: img != null ? 190 : 140),
+                    ),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 6),
               if ('${p['desc'] ?? ''}'.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text('${p['desc']}', style: TextStyle(color: hint))),
               if (needSize) ...[
                 const SizedBox(height: 14),
@@ -481,7 +506,13 @@ class _ProductSheetState extends State<_ProductSheet> {
                             if (await addWithConfirm(parent, p, line)) app.toast('أُضيف «${p['name']}» إلى السلة');
                           }
                         : null,
-                    child: Text(needSize && size.isEmpty ? 'اختر الحجم أولاً' : 'أضف · ${money(unit * qty)}'),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Flexible(
+                        child: Text(needSize && size.isEmpty ? 'اختر الحجم أولاً' : 'أضف · ${money(unit * qty)}',
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                      if (!(needSize && size.isEmpty)) ...[const SizedBox(width: 8), const Icon(Icons.arrow_forward_rounded, size: 20)],
+                    ]),
                   ),
                 ),
               ]),
@@ -532,4 +563,18 @@ class _AdCard extends StatelessWidget {
       ]),
     );
   }
+}
+
+
+class _Stat extends StatelessWidget {
+  final String value, label;
+  const _Stat(this.value, this.label);
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 120),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+          Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor)),
+        ]),
+      );
 }

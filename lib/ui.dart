@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'store.dart';
 
-const brand = Color(0xFF0F6B4F);
-const brandDark = Color(0xFF084532);
+// ألوان التصميم الجديد: أخضر نعناعي + أبيض + أسود
+const brand = Color(0xFF4E9F82);
+const brandDark = Color(0xFF2E7A5F);
+const mint = Color(0xFFDCEFE7); // دوائر خلف الصور
+const mintSoft = Color(0xFFEEF7F3); // خلفيات خفيفة
+const ink = Color(0xFF161817); // الأزرار السوداء
 const orange = Color(0xFFE8890C);
 const star = Color(0xFFF2A516);
 const info = Color(0xFF1D4E89);
@@ -11,7 +15,7 @@ const info = Color(0xFF1D4E89);
 const heroGradient = LinearGradient(
   begin: Alignment.topRight,
   end: Alignment.bottomLeft,
-  colors: [Color(0xFF0F6B4F), Color(0xFF0B5640), Color(0xFF084532)],
+  colors: [Color(0xFF66B496), Color(0xFF4E9F82), Color(0xFF3A8A6D)],
 );
 const anyGradient = LinearGradient(
   begin: Alignment.topRight,
@@ -42,7 +46,7 @@ Cat catOf(String? id) => cats.firstWhere((c) => c.id == id, orElse: () => cats.l
 
 List<BoxShadow> softShadow(BuildContext context) => Theme.of(context).brightness == Brightness.dark
     ? const []
-    : [BoxShadow(color: const Color(0xFF14201B).withValues(alpha: 0.07), blurRadius: 16, offset: const Offset(0, 4))];
+    : [BoxShadow(color: const Color(0xFF1E4D3C).withValues(alpha: 0.08), blurRadius: 22, offset: const Offset(0, 8))];
 
 class Box extends StatelessWidget {
   final Widget child;
@@ -58,7 +62,7 @@ class Box extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: color ?? Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
         border: border,
         boxShadow: softShadow(context),
       ),
@@ -67,7 +71,7 @@ class Box extends StatelessWidget {
     if (onTap == null) return c;
     return Material(
       color: Colors.transparent,
-      child: InkWell(borderRadius: BorderRadius.circular(18), onTap: onTap, child: c),
+      child: InkWell(borderRadius: BorderRadius.circular(22), onTap: onTap, child: c),
     );
   }
 }
@@ -76,14 +80,14 @@ class Pill extends StatelessWidget {
   final String text;
   final Color bg, fg;
   final IconData? icon;
-  const Pill(this.text, {super.key, this.bg = const Color(0xFFEEF2F0), this.fg = const Color(0xFF56625C), this.icon});
+  const Pill(this.text, {super.key, this.bg = const Color(0xFFEAF4EF), this.fg = const Color(0xFF3F5A4F), this.icon});
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(color: dark ? fg.withValues(alpha: 0.22) : bg, borderRadius: BorderRadius.circular(9)),
+      decoration: BoxDecoration(color: dark ? fg.withValues(alpha: 0.22) : bg, borderRadius: BorderRadius.circular(20)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (icon != null) ...[Icon(icon, size: 14, color: dark ? Colors.white70 : fg), const SizedBox(width: 4)],
         Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: dark ? Colors.white : fg)),
@@ -185,7 +189,7 @@ class QtyStepper extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final fg = dark ? const Color(0xFF86D9B6) : const Color(0xFF0A5A41);
     return Container(
-      decoration: BoxDecoration(color: dark ? const Color(0xFF16352A) : const Color(0xFFE2F1EA), borderRadius: BorderRadius.circular(13)),
+      decoration: BoxDecoration(color: dark ? const Color(0xFF16352A) : mint, borderRadius: BorderRadius.circular(30)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         IconButton(onPressed: enabled ? onAdd : null, icon: Icon(Icons.add_rounded, color: fg), tooltip: 'زيادة'),
         Text('$qty', style: TextStyle(fontWeight: FontWeight.w700, color: fg, fontSize: 16)),
@@ -195,6 +199,8 @@ class QtyStepper extends StatelessWidget {
   }
 }
 
+/// صورة المنتج داخل دائرة نعناعية مثل التصميم.
+/// الصورة المقصوصة الخلفية (cut) تظهر كاملة فوق الدائرة، والعادية تُقصّ دائرياً.
 class ItemThumb extends StatelessWidget {
   final Doc product;
   final String cat;
@@ -205,20 +211,37 @@ class ItemThumb extends StatelessWidget {
   Widget build(BuildContext context) {
     final img = app.productImage(product);
     final c = catOf(cat);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: SizedBox(
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final cut = product['cut'] == true;
+    final circle = dark ? const Color(0xFF1F3A30) : mint;
+    if (img == null) {
+      return Container(
         width: size,
         height: size,
-        child: img != null
-            ? Image.memory(img, fit: BoxFit.cover, gaplessPlayback: true)
-            : Container(
-                color: c.bg,
-                alignment: Alignment.center,
-                child: Text(firstChar('${product['name'] ?? ''}'),
-                    style: TextStyle(fontSize: size * 0.32, fontWeight: FontWeight.w700, color: c.fg)),
-              ),
-      ),
+        decoration: BoxDecoration(color: dark ? c.fg.withValues(alpha: 0.3) : c.bg, shape: BoxShape.circle),
+        alignment: Alignment.center,
+        child: Text(firstChar('${product['name'] ?? ''}'),
+            style: TextStyle(fontSize: size * 0.34, fontWeight: FontWeight.w700, color: dark ? Colors.white : c.fg)),
+      );
+    }
+    if (!cut) {
+      return Container(
+        width: size,
+        height: size,
+        padding: EdgeInsets.all(size * 0.04),
+        decoration: BoxDecoration(color: circle, shape: BoxShape.circle),
+        child: ClipOval(child: Image.memory(img, fit: BoxFit.cover, gaplessPlayback: true)),
+      );
+    }
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
+        Container(width: size * 0.86, height: size * 0.86, decoration: BoxDecoration(color: circle, shape: BoxShape.circle)),
+        Positioned.fill(
+          child: Image.memory(img, fit: BoxFit.contain, gaplessPlayback: true),
+        ),
+      ]),
     );
   }
 }
@@ -264,7 +287,7 @@ class ShopCard extends StatelessWidget {
       width: mini ? 220 : null,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(26),
         boxShadow: softShadow(context),
       ),
       clipBehavior: Clip.antiAlias,
@@ -273,46 +296,52 @@ class ShopCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            SizedBox(
-              height: mini ? 100 : 136,
-              child: Stack(fit: StackFit.expand, children: [
-                if (cover != null)
-                  Image.memory(cover, fit: BoxFit.cover, gaplessPlayback: true)
-                else
-                  Container(color: c.bg, child: Icon(c.icon, size: mini ? 44 : 58, color: c.fg)),
-                if (!open)
-                  Container(
-                    color: Colors.black.withValues(alpha: 0.55),
-                    alignment: Alignment.center,
-                    child: Text(app.closedLabel(shop), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                  ),
-                if (offers.isNotEmpty)
-                  PositionedDirectional(
-                    bottom: 10,
-                    start: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                      decoration: BoxDecoration(color: orange, borderRadius: BorderRadius.circular(8)),
-                      child: Text(app.couponLabel(offers.first),
-                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: SizedBox(
+                  height: mini ? 96 : 140,
+                  child: Stack(fit: StackFit.expand, children: [
+                    if (cover != null)
+                      Image.memory(cover, fit: BoxFit.cover, gaplessPlayback: true)
+                    else
+                      Container(color: mintSoft, child: Icon(c.icon, size: mini ? 44 : 58, color: brand)),
+                    if (!open)
+                      Container(
+                        color: Colors.black.withValues(alpha: 0.55),
+                        alignment: Alignment.center,
+                        child: Text(app.closedLabel(shop), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                      ),
+                    if (offers.isNotEmpty)
+                      PositionedDirectional(
+                        bottom: 10,
+                        start: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(color: orange, borderRadius: BorderRadius.circular(20)),
+                          child: Text(app.couponLabel(offers.first),
+                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    PositionedDirectional(
+                      top: 8,
+                      end: 8,
+                      child: Material(
+                        color: Colors.white.withValues(alpha: 0.95),
+                        shape: const CircleBorder(),
+                        child: IconButton(
+                          visualDensity: VisualDensity.compact,
+                          tooltip: fav ? 'إزالة من المفضلة' : 'أضف إلى المفضلة',
+                          onPressed: () => app.toggleFav(shop['id']),
+                          icon: Icon(fav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                              color: fav ? const Color(0xFFE5484D) : const Color(0xFF56625C)),
+                        ),
+                      ),
                     ),
-                  ),
-                PositionedDirectional(
-                  top: 8,
-                  end: 8,
-                  child: Material(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      visualDensity: VisualDensity.compact,
-                      tooltip: fav ? 'إزالة من المفضلة' : 'أضف إلى المفضلة',
-                      onPressed: () => app.toggleFav(shop['id']),
-                      icon: Icon(fav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                          color: fav ? const Color(0xFFC2410C) : const Color(0xFF56625C)),
-                    ),
-                  ),
+                  ]),
                 ),
-              ]),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
@@ -325,7 +354,13 @@ class ShopCard extends StatelessWidget {
                 ]),
                 const SizedBox(height: 4),
                 Wrap(spacing: 10, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                  Text(c.label, style: TextStyle(fontSize: 12.5, color: hint)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1F3A30) : mintSoft,
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Text(c.label, style: const TextStyle(fontSize: 12, color: brand, fontWeight: FontWeight.w600)),
+                  ),
                   if (!mini)
                     Row(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.schedule_rounded, size: 14, color: hint),
