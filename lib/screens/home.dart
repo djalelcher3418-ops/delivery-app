@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../store.dart';
 import '../ui.dart';
@@ -61,17 +62,17 @@ class _HomeScreenState extends State<HomeScreen> {
       ));
     }
     if (app.anyOn) {
-      out.add(_builtSlide(anyGradient, 'اشترِ لي أي شيء', 'من أي محل في المدينة، حتى لو لم يكن في التطبيق', 'اطلب الآن',
+      out.add(_builtSlide(ink, Colors.white, 'اشترِ لي أي شيء', 'من أي محل في المدينة، حتى لو لم يكن في التطبيق', 'اطلب الآن',
           Icons.shopping_bag_rounded, () => tab.value = 1));
     }
     final offers = app.liveCoupons;
     if (offers.isNotEmpty) {
-      out.add(_builtSlide(heroGradient, '${offers.length} عروض وخصومات', 'رموز خصم من محلات مدينتك', 'شاهد العروض',
-          Icons.local_offer_rounded, () => openShop(offers.first['shopId'])));
+      out.add(_builtSlide(star, ink, '${offers.length} عروض وخصومات', 'رموز خصم من محلات مدينتك', 'شاهد العروض', Icons.local_offer_rounded,
+          () => openShop(offers.first['shopId'])));
     }
     if (out.isEmpty) {
-      out.add(_builtSlide(const LinearGradient(colors: [Color(0xFF1D4E89), Color(0xFF3478C6)]), 'كل محلات مدينتك في مكان واحد',
-          'اطلب وتابع الموصّل على الخريطة حتى بابك', '', Icons.delivery_dining_rounded, null));
+      out.add(_builtSlide(tea, Colors.white, 'كل محلات مدينتك في مكان واحد', 'اطلب وتابع الموصّل على الخريطة حتى بابك', '',
+          Icons.delivery_dining_rounded, null));
     }
     return out;
   }
@@ -79,32 +80,34 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _slideBox({required Widget child, VoidCallback? onTap}) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(20),
           child: Material(child: InkWell(onTap: onTap, child: child)),
         ),
       );
 
-  Widget _builtSlide(Gradient g, String title, String sub, String cta, IconData icon, VoidCallback? onTap) => _slideBox(
+  /// شريحة بلون واحد ونقش زليج خفيف، وزر صغير بلون معاكس
+  Widget _builtSlide(Color bg, Color fg, String title, String sub, String cta, IconData icon, VoidCallback? onTap) => _slideBox(
         onTap: onTap,
         child: Container(
-          decoration: BoxDecoration(gradient: g),
+          color: bg,
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
           child: Stack(children: [
+            Zellige(opacity: fg == ink ? 0.0 : 0.12),
             PositionedDirectional(
               end: -16,
               bottom: -20,
-              child: Icon(icon, size: 130, color: Colors.white.withValues(alpha: 0.16)),
+              child: Icon(icon, size: 130, color: fg.withValues(alpha: 0.16)),
             ),
             Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text(title, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text(sub, style: const TextStyle(color: Colors.white, fontSize: 13)),
+              Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: fg, fontSize: 23)),
+              const SizedBox(height: 2),
+              Text(sub, style: TextStyle(color: fg, fontSize: 13.5)),
               if (cta.isNotEmpty) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(30)),
-                  child: Text(cta, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                  decoration: BoxDecoration(color: fg == ink ? ink : brand, borderRadius: BorderRadius.circular(12)),
+                  child: Text(cta, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.5)),
                 ),
               ],
             ]),
@@ -122,37 +125,45 @@ class _HomeScreenState extends State<HomeScreen> {
         final catList = cats.where((c) => used.contains(c.id)).toList();
         final filtered = q.trim().isNotEmpty || cat != 'all';
         final Doc? live = app.orders.cast<Doc?>().firstWhere((o) => activeStatuses.contains(o!['status']), orElse: () => null);
-        return CustomScrollView(slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 10, 12, 4),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Expanded(
-                    child: Row(children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: const BoxDecoration(color: mint, shape: BoxShape.circle),
-                        child: const Icon(Icons.location_on_rounded, color: brandDark, size: 20),
-                      ),
+        final top = MediaQuery.of(context).padding.top;
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.light,
+          child: CustomScrollView(slivers: [
+            // الرأس بلون الهريسة ونقش الزليج، والورقة تصعد فوقه بزاوية 28
+            SliverToBoxAdapter(
+              child: Stack(children: [
+                const Positioned.fill(child: ColoredBox(color: brand)),
+                const Zellige(),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, top + 10, 8, 46),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      const Icon(Icons.location_on_outlined, color: Colors.white, size: 22),
                       const SizedBox(width: 8),
-                      Flexible(
+                      Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('التوصيل إلى', style: TextStyle(color: Theme.of(context).hintColor, fontSize: 12)),
+                          Text('التوصيل إلى', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12)),
                           if (zones.isEmpty)
-                            const Text('لا توجد أحياء بعد', style: TextStyle(fontWeight: FontWeight.w700))
+                            const Text('لا توجد أحياء بعد',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))
                           else
                             DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
                                 value: zone?['id'],
                                 isDense: true,
                                 borderRadius: BorderRadius.circular(16),
+                                iconEnabledColor: Colors.white,
+                                dropdownColor: Theme.of(context).colorScheme.surface,
                                 style: TextStyle(
                                     color: Theme.of(context).colorScheme.onSurface,
                                     fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 15),
+                                    fontSize: 16),
+                                selectedItemBuilder: (_) => [
+                                  for (final z in zones)
+                                    Text('${z['name']}',
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+                                ],
                                 items: [for (final z in zones) DropdownMenuItem(value: z['id'] as String, child: Text('${z['name']}'))],
                                 onChanged: (v) {
                                   if (v != null) app.setZone(v);
@@ -161,124 +172,141 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                         ]),
                       ),
-                    ]),
-                  ),
-                  IconButton(
-                    tooltip: 'السلة',
-                    onPressed: () => tab.value = 3,
-                    icon: Badge(
-                      isLabelVisible: app.cartCount > 0,
-                      label: Text('${app.cartCount}'),
-                      child: const Icon(Icons.shopping_cart_outlined),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'الخروج',
-                    onPressed: () => _logout(context),
-                    icon: Icon(Icons.logout_rounded, color: Theme.of(context).hintColor),
-                  ),
-                ]),
-                const SizedBox(height: 16),
-                Text.rich(
-                  TextSpan(children: [
-                    const TextSpan(text: 'أهلاً'),
-                    if (app.name.isNotEmpty) TextSpan(text: '، ${app.name.split(' ').first}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                  ]),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w500),
-                ),
-                Text('ماذا نوصل لك اليوم؟', style: TextStyle(color: Theme.of(context).hintColor, fontSize: 14.5)),
-                const SizedBox(height: 14),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 8),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(30), boxShadow: softShadow(context)),
-                    child: TextField(
-                      onChanged: (v) => setState(() => q = v),
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: 'ابحث عن محل أو أكلة أو منتج',
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: brand, width: 1.5)),
+                      IconButton(
+                        tooltip: 'السلة',
+                        color: Colors.white,
+                        onPressed: () => tab.value = 3,
+                        icon: Badge(
+                          isLabelVisible: app.cartCount > 0,
+                          label: Text('${app.cartCount}'),
+                          child: const Icon(Icons.shopping_cart_outlined),
+                        ),
                       ),
+                      IconButton(
+                        tooltip: 'الخروج',
+                        color: Colors.white,
+                        onPressed: () => _logout(context),
+                        icon: const Icon(Icons.logout_rounded),
+                      ),
+                    ]),
+                    const SizedBox(height: 16),
+                    if (app.name.isNotEmpty)
+                      Text('أهلاً، ${app.name.split(' ').first}',
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 15, fontWeight: FontWeight.w600)),
+                    Text('ماذا نوصل لك اليوم؟',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontSize: 30, height: 1.2)),
+                    const SizedBox(height: 14),
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 12),
+                      child: TextField(
+                        onChanged: (v) => setState(() => q = v),
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          hintText: 'ابحث عن محل أو طبق أو منتج',
+                          prefixIcon: const Icon(Icons.search_rounded),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: ink, width: 1.6)),
+                        ),
+                      ),
+                    ),
+                  ]),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: -1,
+                  height: 26,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                     ),
                   ),
                 ),
               ]),
             ),
-          ),
-          if (live != null)
+            if (live != null)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Box(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TrackScreen(orderId: live['id']))),
+                    child: Row(children: [
+                      const Pulse(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(app.headOf(live), style: const TextStyle(fontWeight: FontWeight.w700)),
+                          Text('${app.orderTitle(live)}، اضغط لتتابع طلبك',
+                              style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor)),
+                        ]),
+                      ),
+                      const Icon(Icons.chevron_left_rounded),
+                    ]),
+                  ),
+                ),
+              ),
+            // الأقسام: شارات على شكل نجمة الزليج
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                child: Box(
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TrackScreen(orderId: live['id']))),
-                  child: Row(children: [
-                    const Pulse(),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(app.headOf(live), style: const TextStyle(fontWeight: FontWeight.w700)),
-                        Text('${app.orderTitle(live)} · تابع طلبك', style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor)),
-                      ]),
-                    ),
-                    const Icon(Icons.chevron_left_rounded),
-                  ]),
+              child: SizedBox(
+                height: 98,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  children: [
+                    _catBtn('all', 'الكل', Icons.apps_rounded, inkSoft, ink),
+                    for (final c in catList) _catBtn(c.id, c.label, c.icon, c.bg, c.fg),
+                    if (app.favs.isNotEmpty) _catBtn('fav', 'المفضلة', Icons.favorite_rounded, brandSoft, brandDark),
+                  ],
                 ),
               ),
             ),
-          if (!filtered) const SliverToBoxAdapter(child: StoriesRow()),
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 52,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-                children: [
-                  _catBtn('all', 'الكل'),
-                  for (final c in catList) _catBtn(c.id, c.label),
-                  if (app.favs.isNotEmpty) _catBtn('fav', 'المفضلة ♥'),
-                ],
-              ),
-            ),
-          ),
-          if (!filtered) const SliverToBoxAdapter(child: AdsRow()),
-          ..._body(filtered),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-        ]);
+            if (!filtered) const SliverToBoxAdapter(child: StoriesRow()),
+            if (!filtered) const SliverToBoxAdapter(child: AdsRow()),
+            ..._body(filtered),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ]),
+        );
       },
     );
   }
 
-  /// تبويب نصي يتحته خط أخضر عند اختياره (مثل ALL · FAST FOOD في التصميم)
-  Widget _catBtn(String id, String label) {
+  /// شارة القسم: المختارة بلون الهريسة وأيقونتها بيضاء
+  Widget _catBtn(String id, String label, IconData icon, Color bg, Color fg) {
     final on = cat == id;
-    final hint = Theme.of(context).hintColor;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => setState(() => cat = id),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 180),
-            style: TextStyle(
-              fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
-              fontSize: 14.5,
-              fontWeight: on ? FontWeight.w800 : FontWeight.w500,
-              color: on ? Theme.of(context).colorScheme.onSurface : hint,
+    final dark = isDark(context);
+    return Semantics(
+      button: true,
+      selected: on,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => setState(() => cat = on && id != 'all' ? 'all' : id),
+        child: SizedBox(
+          width: 74,
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            AnimatedScale(
+              scale: on ? 1.06 : 1,
+              duration: const Duration(milliseconds: 180),
+              child: StarBadge(
+                color: on ? brand : (dark ? fg.withValues(alpha: 0.3) : bg),
+                child: Icon(icon, size: 26, color: on ? Colors.white : (dark ? Colors.white : fg)),
+              ),
             ),
-            child: Text(label),
-          ),
-          const SizedBox(height: 5),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            width: on ? 22 : 0,
-            height: 3,
-            decoration: BoxDecoration(color: brand, borderRadius: BorderRadius.circular(2)),
-          ),
-        ]),
+            const SizedBox(height: 6),
+            Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: on ? FontWeight.w700 : FontWeight.w500,
+                  color: on ? accentOf(context) : Theme.of(context).colorScheme.onSurface,
+                )),
+          ]),
+        ),
       ),
     );
   }
@@ -335,11 +363,16 @@ class _HomeScreenState extends State<HomeScreen> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
-              for (final o in const [('best', 'الأنسب', Icons.auto_awesome_rounded), ('near', 'الأقرب', Icons.near_me_rounded), ('rating', 'الأعلى تقييماً', Icons.star_rounded)])
+              for (final o in const [
+                ('best', 'الأنسب', Icons.auto_awesome_rounded),
+                ('near', 'الأقرب', Icons.near_me_rounded),
+                ('rating', 'الأعلى تقييماً', Icons.star_rounded)
+              ])
                 Padding(
                   padding: const EdgeInsetsDirectional.only(end: 8),
                   child: ChoiceChip(
-                    avatar: Icon(o.$3, size: 16),
+                    avatar:
+                        Icon(o.$3, size: 16, color: effSort == o.$1 ? (isDark(context) ? ink : Colors.white) : Theme.of(context).hintColor),
                     label: Text(o.$2),
                     selected: effSort == o.$1,
                     showCheckmark: false,
@@ -376,7 +409,8 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.search_off_rounded,
             title: app.visibleShops.isEmpty ? 'لا توجد محلات بعد' : 'لا توجد نتائج',
             text: 'جرّب كلمة أخرى، أو اطلب من «اشترِ لي أي شيء».',
-            action: OutlinedButton.icon(onPressed: () => tab.value = 1, icon: const Icon(Icons.shopping_bag_outlined), label: const Text('اشترِ لي أي شيء')),
+            action: OutlinedButton.icon(
+                onPressed: () => tab.value = 1, icon: const Icon(Icons.shopping_bag_outlined), label: const Text('اشترِ لي أي شيء')),
           ),
         )
       else
@@ -384,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           sliver: SliverList.separated(
             itemCount: rows.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 14),
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (_, i) => ShopCard(shop: rows[i].key, hits: rows[i].value, onTap: () => openShop(rows[i].key['id'])),
           ),
         ),
@@ -396,23 +430,21 @@ class _HomeScreenState extends State<HomeScreen> {
     // منتجات بصور من محلات مفتوحة؛ المقصوصة الخلفية أولاً، والترتيب يتغير كل يوم
     final day = DateTime.now().difference(DateTime(2026)).inDays;
     final openIds = app.visibleShops.where(app.isOpen).map((s) => s['id']).toSet();
-    final picks = app.products
-        .where((p) => p['hasImg'] == true && p['available'] == true && openIds.contains(p['shopId']))
-        .toList()
+    final picks = app.products.where((p) => p['hasImg'] == true && p['available'] == true && openIds.contains(p['shopId'])).toList()
       ..sort((a, b) {
         final c = (b['cut'] == true ? 1 : 0) - (a['cut'] == true ? 1 : 0);
         if (c != 0) return c;
         return ('${a['id']}$day'.hashCode & 0xffff).compareTo('${b['id']}$day'.hashCode & 0xffff);
       });
     if (picks.length > 10) picks.removeRange(10, picks.length);
-    final top = app.visibleShops.where((s) => asInt(s['ratingCount']) >= 1).toList()
+    final best = app.visibleShops.where((s) => asInt(s['ratingCount']) >= 1).toList()
       ..sort((a, b) => (avgRating(b) ?? 0).compareTo(avgRating(a) ?? 0));
     return [
       SliverToBoxAdapter(
         child: Column(children: [
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           SizedBox(
-            height: 180,
+            height: 172,
             child: PageView(controller: page, onPageChanged: (i) => setState(() => slide = i), children: slides),
           ),
           if (slides.length > 1)
@@ -425,7 +457,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 3),
                     width: i == slide ? 18 : 6,
                     height: 6,
-                    decoration: BoxDecoration(color: i == slide ? brand : Theme.of(context).dividerColor, borderRadius: BorderRadius.circular(3)),
+                    decoration:
+                        BoxDecoration(color: i == slide ? brand : Theme.of(context).dividerColor, borderRadius: BorderRadius.circular(3)),
                   ),
               ]),
             ),
@@ -435,7 +468,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SliverToBoxAdapter(child: SectionTitle('مقترحات لك')),
         SliverToBoxAdapter(
           child: SizedBox(
-            height: 262,
+            height: 244,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
@@ -461,17 +494,17 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
-      if (top.length >= 2) ...[
+      if (best.length >= 2) ...[
         const SliverToBoxAdapter(child: SectionTitle('الأعلى تقييماً')),
         SliverToBoxAdapter(
           child: SizedBox(
-            height: 196,
+            height: 200,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-              itemCount: top.length > 8 ? 8 : top.length,
+              itemCount: best.length > 8 ? 8 : best.length,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (_, i) => ShopCard(shop: top[i], mini: true, onTap: () => openShop(top[i]['id'])),
+              itemBuilder: (_, i) => ShopCard(shop: best[i], mini: true, onTap: () => openShop(best[i]['id'])),
             ),
           ),
         ),
@@ -503,28 +536,29 @@ class _OfferCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = app.shop(c['shopId']);
+    final dark = isDark(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
         width: 236,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF3A2A12) : const Color(0xFFFFF1DC),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: orange),
+          color: dark ? star.withValues(alpha: 0.18) : saffronSoft,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: star, width: 1.5),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(app.couponLabel(c), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17, color: orange)),
-          Text('عند ${s?['name'] ?? ''}${asInt(c['minOrder']) > 0 ? ' · من ${money(asInt(c['minOrder']))}' : ''}',
+          Text(app.couponLabel(c), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 18, fontWeight: FontWeight.w800)),
+          Text('عند ${s?['name'] ?? ''}${asInt(c['minOrder']) > 0 ? '، من ${money(asInt(c['minOrder']))}' : ''}',
               maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
           const Spacer(),
           Row(children: [
             const Text('الرمز: ', style: TextStyle(fontSize: 13)),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(6)),
-              child: Text('${c['code']}', style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.6)),
+              decoration: BoxDecoration(color: star, borderRadius: BorderRadius.circular(8)),
+              child: Text('${c['code']}', style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.6, color: ink)),
             ),
           ]),
         ]),
@@ -562,8 +596,7 @@ class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
       );
 }
 
-
-/// بطاقة منتج بنمط التصميم: صورة كبيرة في دائرة نعناعية تبرز فوق البطاقة
+/// بطاقة منتج: صورة مربعة على لون القسم، الاسم والمحل، والسعر مع زر إضافة بلون الهريسة
 class ProductCard extends StatelessWidget {
   final Doc p;
   const ProductCard({super.key, required this.p});
@@ -574,56 +607,58 @@ class ProductCard extends StatelessWidget {
     final hint = Theme.of(context).hintColor;
     void open() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShopScreen(shopId: p['shopId'])));
     return SizedBox(
-      width: 172,
-      child: Stack(clipBehavior: Clip.none, children: [
-        Positioned.fill(
-          top: 52,
-          child: Material(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(26),
-            elevation: 0,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(26),
-              onTap: () => openProductSheet(context, p),
-              child: Container(
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(26), boxShadow: softShadow(context)),
-                padding: const EdgeInsets.fromLTRB(14, 86, 14, 12),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${p['name']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
-                  InkWell(
-                    onTap: open,
-                    child: Text('${shop?['name'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: hint)),
-                  ),
-                  const Spacer(),
-                  Row(children: [
-                    Expanded(
-                      child: Text('${optList(p['sizes']).isNotEmpty ? 'من ' : ''}${money(basePrice(p))}',
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: brand)),
-                    ),
-                    Material(
-                      color: ink,
-                      shape: const CircleBorder(),
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: () => addProduct(context, p),
-                        child: const SizedBox(width: 34, height: 34, child: Icon(Icons.add_rounded, color: Colors.white, size: 20)),
-                      ),
-                    ),
-                  ]),
-                ]),
+      width: 160,
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => openProductSheet(context, p),
+          child: Container(
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), boxShadow: softShadow(context)),
+            padding: const EdgeInsets.all(8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              ItemThumb(product: p, cat: '${shop?['cat'] ?? ''}', size: 144),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text('${p['name']}',
+                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               ),
-            ),
+              InkWell(
+                onTap: open,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text('${shop?['name'] ?? ''}',
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: hint)),
+                ),
+              ),
+              const Spacer(),
+              Row(children: [
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text('${optList(p['sizes']).isNotEmpty ? 'من ' : ''}${money(basePrice(p))}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5, color: accentOf(context))),
+                ),
+                IconButton(
+                  tooltip: 'أضف ${p['name']}',
+                  onPressed: () => addProduct(context, p),
+                  style: IconButton.styleFrom(
+                    backgroundColor: brand,
+                    foregroundColor: Colors.white,
+                    fixedSize: const Size(40, 40),
+                    minimumSize: const Size(40, 40),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.add_rounded, size: 22),
+                ),
+              ]),
+            ]),
           ),
         ),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: IgnorePointer(child: ItemThumb(product: p, cat: '${shop?['cat'] ?? ''}', size: 132)),
-          ),
-        ),
-      ]),
+      ),
     );
   }
 }

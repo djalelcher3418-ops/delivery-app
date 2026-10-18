@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../store.dart';
 import '../ui.dart';
 
-/// شاشة الترحيب بنمط التصميم: خلفية نعناعية، لوحة فاتحة خلف صورة كبيرة،
-/// نقاط الصفحات، وزر أسود بشكل كبسولة فيه دائرة خضراء بسهم.
+/// شاشة الترحيب: خلفية الهريسة بنقش الزليج، لوحة فاتحة خلف صورة كبيرة،
+/// نقاط الصفحات، وزر نيلي فيه دائرة بلون الهريسة وسهم.
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
   @override
@@ -58,7 +58,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: brand,
-      body: SafeArea(
+      body: Stack(children: [
+        const Zellige(opacity: 0.12),
+        SafeArea(
         child: Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
@@ -102,17 +104,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               margin: const EdgeInsets.fromLTRB(24, 0, 24, 12),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              child: Text(err, style: const TextStyle(color: Color(0xFF8A3414), fontWeight: FontWeight.w600)),
+              child: Text(err, style: const TextStyle(color: brandDark, fontWeight: FontWeight.w600)),
             ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: StartButton(label: 'ابدأ الطلب', busy: busy, onTap: busy ? null : _go),
           ),
           const SizedBox(height: 12),
-          Text('بدون تسجيل · الدفع نقداً عند الاستلام', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
+          Text('بدون تسجيل، والدفع نقداً عند الاستلام', style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
           const SizedBox(height: 18),
         ]),
       ),
+      ]),
     );
   }
 }
@@ -160,7 +163,7 @@ class _SlideView extends StatelessWidget {
                         width: d * 0.2,
                         height: d * 0.2,
                         decoration: BoxDecoration(
-                          color: mint,
+                          color: brandSoft,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 3),
                         ),
@@ -187,7 +190,7 @@ class _SlideView extends StatelessWidget {
   }
 }
 
-/// زر أسود بشكل كبسولة وفي بدايته دائرة خضراء بسهم (مثل «Get Started»)
+/// زر نيلي وفي بدايته دائرة بلون الهريسة وسهم
 class StartButton extends StatelessWidget {
   final String label;
   final bool busy;
@@ -198,7 +201,7 @@ class StartButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: ink,
-      shape: const StadiumBorder(),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -209,7 +212,7 @@ class StartButton extends StatelessWidget {
             Container(
               width: 46,
               height: 46,
-              decoration: const BoxDecoration(color: brand, shape: BoxShape.circle),
+              decoration: BoxDecoration(color: brand, borderRadius: BorderRadius.circular(14)),
               child: busy
                   ? const Padding(padding: EdgeInsets.all(13), child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                   : const Icon(Icons.arrow_forward_rounded, color: Colors.white),

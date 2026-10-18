@@ -15,6 +15,25 @@ class ShopScreen extends StatefulWidget {
 class _ShopScreenState extends State<ShopScreen> {
   List<Doc>? reviews;
   bool loadingReviews = false;
+  String? section; // القسم المختار في شريط الأقسام
+  final keys = <String, GlobalKey>{};
+  final scroll = ScrollController();
+  bool collapsed = false; // بعد تجاوز الغلاف يظهر شريط علوي باسم المحل
+
+  @override
+  void initState() {
+    super.initState();
+    scroll.addListener(() {
+      final c = scroll.offset > 170;
+      if (c != collapsed) setState(() => collapsed = c);
+    });
+  }
+
+  @override
+  void dispose() {
+    scroll.dispose();
+    super.dispose();
+  }
 
   Future<void> _loadReviews() async {
     setState(() => loadingReviews = true);
@@ -25,6 +44,12 @@ class _ShopScreenState extends State<ShopScreen> {
       app.toast(errText(e));
     }
     if (mounted) setState(() => loadingReviews = false);
+  }
+
+  void _jump(String sec) {
+    setState(() => section = sec);
+    final ctx = keys[sec]?.currentContext;
+    if (ctx != null) Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 350), curve: Curves.easeOut, alignment: 0.05);
   }
 
   @override
@@ -44,6 +69,9 @@ class _ShopScreenState extends State<ShopScreen> {
           final sec = '${p['section'] ?? ''}';
           if (!sections.contains(sec)) sections.add(sec);
         }
+        for (final sec in sections) {
+          keys.putIfAbsent(sec, () => GlobalKey());
+        }
         final zone = app.currentZone;
         final offers = app.shopCoupons(s['id']);
         final stories = app.postsOf(s, 'story'), ads = app.postsOf(s, 'ad');
@@ -52,209 +80,351 @@ class _ShopScreenState extends State<ShopScreen> {
         final prep = asInt(s['prepMin']) > 0 ? asInt(s['prepMin']) : 15;
         final hint = Theme.of(context).hintColor;
         final h = s['hours'];
+        final dark = isDark(context);
+        final top = MediaQuery.of(context).padding.top;
+        final firstAd = stories.isNotEmpty && ads.isNotEmpty ? ads.first : null;
 
         return Scaffold(
-          body: CustomScrollView(slivers: [
-            SliverAppBar(
-              expandedHeight: 210,
-              pinned: true,
-              backgroundColor: c.bg,
-              foregroundColor: Colors.black87,
-              leading: Padding(
-                padding: const EdgeInsets.all(6),
-                child: CircleAvatar(
-                  backgroundColor: Colors.white.withValues(alpha: 0.92),
-                  child: const BackButton(color: Colors.black87),
-                ),
-              ),
-              actions: [
-                Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white.withValues(alpha: 0.92),
-                    child: IconButton(
-                      tooltip: fav ? 'إزالة من المفضلة' : 'أضف إلى المفضلة',
-                      onPressed: () => app.toggleFav(s['id']),
-                      icon: Icon(fav ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: const Color(0xFFC2410C)),
+          body: Stack(children: [
+            CustomScrollView(controller: scroll, slivers: [
+              // الغلاف، وبطاقة المحل تصعد فوقه
+              SliverToBoxAdapter(
+                child: Stack(children: [
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 210 + top,
+                    child: cover != null
+                        ? Image.memory(cover, fit: BoxFit.cover, gaplessPlayback: true)
+                        : Container(
+                            color: dark ? c.fg.withValues(alpha: 0.3) : c.bg,
+                            alignment: Alignment.center,
+                            padding: EdgeInsets.only(top: top),
+                            child: Icon(c.icon, size: 86, color: dark ? Colors.white70 : c.fg),
+                          ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(16, 184 + top, 16, 0),
+                    child: Box(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Expanded(child: Text('${s['name']}', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 26))),
+                          Padding(padding: const EdgeInsets.only(top: 6), child: RatingChip(s, showNew: true)),
+                        ]),
+                        Text((s['desc'] ?? '').toString().isNotEmpty ? '${s['desc']}' : c.label, style: TextStyle(color: hint, fontSize: 14)),
+                        const SizedBox(height: 12),
+                        Wrap(spacing: 8, runSpacing: 8, children: [
+                          open ? const OpenPill() : Pill(app.closedLabel(s), bg: brandSoft, fg: brandDark),
+                          if (zone != null) Pill('التوصيل ${money(asInt(zone['fee']))}', icon: Icons.delivery_dining_rounded),
+                          Pill('${prep + 10}–${prep + 25} دقيقة', icon: Icons.schedule_rounded),
+                          if (h is Map && h['from'] != null) Pill('${h['from']} – ${h['to']}', icon: Icons.access_time_rounded),
+                          if (asInt(s['minOrder']) > 0) Pill('أقل طلب ${money(asInt(s['minOrder']))}'),
+                        ]),
+                      ]),
                     ),
                   ),
-                ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                background: cover != null
-                    ? Image.memory(cover, fit: BoxFit.cover, gaplessPlayback: true)
-                    : Container(color: c.bg, child: Icon(c.icon, size: 80, color: c.fg)),
+                ]),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                child: Box(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Expanded(child: Text('${s['name']}', style: Theme.of(context).textTheme.titleLarge)),
-                      RatingChip(s, showNew: true),
-                    ]),
-                    const SizedBox(height: 4),
-                    Text('${c.label}${(s['desc'] ?? '').toString().isNotEmpty ? ' · ${s['desc']}' : ''}', style: TextStyle(color: hint, fontSize: 13)),
-                    const SizedBox(height: 10),
-                    Wrap(spacing: 6, runSpacing: 6, children: [
-                      open
-                          ? const Pill('مفتوح الآن', bg: Color(0xFFE2F1EA), fg: Color(0xFF0A5A41))
-                          : Pill(app.closedLabel(s)),
-                      if (zone != null) Pill('التوصيل إلى ${zone['name']}: ${money(asInt(zone['fee']))}'),
-                      Pill('${prep + 10}–${prep + 25} د', icon: Icons.schedule_rounded),
-                      if (h is Map && h['from'] != null) Pill('${h['from']} – ${h['to']}', icon: Icons.access_time_rounded),
-                      if (asInt(s['minOrder']) > 0) Pill('أقل طلب ${money(asInt(s['minOrder']))}'),
-                    ]),
-                  ]),
-                ),
-              ),
-            ),
-            if (!open)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Box(
-                    color: const Color(0xFFFCE9DC),
-                    child: const Text('المحل مغلق الآن. يمكنك تصفّح المنتجات، والطلب يكون عند فتحه.',
-                        style: TextStyle(color: Color(0xFF8A3414), fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              ),
-            if (stories.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Box(
-                    onTap: () => openStories(context, [s], 0),
-                    child: Row(children: [
-                      StoryAvatar(shop: s, onTap: () => openStories(context, [s], 0), size: 48, showName: false),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          const Text('يوميات المحل اليوم', style: TextStyle(fontWeight: FontWeight.w700)),
-                          Text(app.storySeen(s) ? 'شاهدتها · اضغط لتعيدها' : 'جديد · اضغط لتشاهد',
-                              style: TextStyle(color: hint, fontSize: 13)),
-                        ]),
-                      ),
-                      const Icon(Icons.play_circle_fill_rounded, color: orange, size: 32),
-                    ]),
-                  ),
-                ),
-              ),
-            for (final ad in ads)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: _AdCard(ad: ad),
-                ),
-              ),
-            for (final cp in offers)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Box(
-                    color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF3A2A12) : const Color(0xFFFFF1DC),
-                    border: Border.all(color: orange),
-                    onTap: () {
-                      app.setCoupon('${cp['code']}');
-                      app.toast('سيُطبَّق الرمز ${cp['code']} على طلبك من هذا المحل');
-                    },
-                    child: Row(children: [
-                      const Icon(Icons.local_offer_rounded, color: orange),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('${app.couponLabel(cp)}${asInt(cp['minOrder']) > 0 ? ' للطلبات من ${money(asInt(cp['minOrder']))}' : ''}',
-                              style: const TextStyle(fontWeight: FontWeight.w800, color: orange)),
-                          Text(app.coupon == cp['code'] ? 'سيُطبَّق على طلبك ✓' : 'اضغط لاستعمال الرمز ${cp['code']}',
-                              style: const TextStyle(fontSize: 13)),
-                        ]),
-                      ),
-                    ]),
-                  ),
-                ),
-              ),
-            if (!app.productsLoaded)
-              const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())))
-            else if (prods.isEmpty)
-              const SliverToBoxAdapter(child: EmptyState(icon: Icons.inventory_2_outlined, title: 'لم يضف هذا المحل منتجاته بعد'))
-            else
-              for (final sec in sections) ...[
+              if (!open)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                    child: Text(sec.isEmpty ? 'منتجات' : sec, style: Theme.of(context).textTheme.titleMedium),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Box(
+                      color: dark ? brand.withValues(alpha: 0.25) : brandSoft,
+                      child: Text('المحل مغلق الآن. يمكنك تصفّح المنتجات، والطلب يكون عند فتحه.',
+                          style: TextStyle(color: dark ? Colors.white : brandDark, fontWeight: FontWeight.w600)),
+                    ),
                   ),
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList.separated(
-                    itemCount: prods.where((p) => '${p['section'] ?? ''}' == sec).length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, i) {
-                      final p = prods.where((p) => '${p['section'] ?? ''}' == sec).elementAt(i);
-                      return _ProductTile(p: p, cat: '${s['cat']}', open: open);
-                    },
-                  ),
-                ),
-              ],
-            if (asInt(s['ratingCount']) > 0)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                  child: Box(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        Expanded(child: Text('آراء الزبائن', style: Theme.of(context).textTheme.titleMedium)),
-                        RatingChip(s),
-                      ]),
-                      const SizedBox(height: 8),
-                      if (reviews == null)
-                        OutlinedButton(onPressed: loadingReviews ? null : _loadReviews, child: const Text('اعرض التعليقات'))
-                      else if (reviews!.isEmpty)
-                        Text('لا توجد تعليقات مكتوبة بعد.', style: TextStyle(color: hint))
-                      else
-                        for (final r in reviews!)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Row(children: [
-                                Expanded(child: Text('${r['name'] ?? 'زبون'}', style: const TextStyle(fontWeight: FontWeight.w700))),
-                                for (int k = 1; k <= 5; k++)
-                                  Icon(Icons.star_rounded, size: 16, color: k <= asInt(r['shop']) ? star : Theme.of(context).dividerColor),
-                              ]),
-                              if ('${r['comment'] ?? ''}'.isNotEmpty) Text('${r['comment']}'),
-                              Text(ago(asInt(r['createdAtMs'])), style: TextStyle(fontSize: 12, color: hint)),
-                            ]),
-                          ),
-                    ]),
-                  ),
-                ),
-              ),
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
-          ]),
-          bottomNavigationBar: showBar
-              ? SafeArea(
+              // يوميات اليوم (وبجانبها أحدث إعلان)
+              if (stories.isNotEmpty)
+                SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                    child: FilledButton(
-                      onPressed: () {
-                        tab.value = 3;
-                        Navigator.of(context).popUntil((r) => r.isFirst);
-                      },
-                      child: Row(children: [
-                        Text('عرض السلة · ${ci.count}'),
-                        const Spacer(),
-                        Text(money(ci.subtotal)),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: IntrinsicHeight(
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        if (firstAd == null)
+                          Expanded(child: _StoryTile(shop: s, story: stories.first, wide: true))
+                        else
+                          _StoryTile(shop: s, story: stories.first, wide: false),
+                        if (firstAd != null) ...[const SizedBox(width: 10), Expanded(child: _AdCard(ad: firstAd, compact: true))],
                       ]),
                     ),
                   ),
-                )
-              : null,
+                ),
+              for (final ad in ads.where((a) => a != firstAd))
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: _AdCard(ad: ad),
+                  ),
+                ),
+              for (final cp in offers)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Box(
+                      color: dark ? star.withValues(alpha: 0.18) : saffronSoft,
+                      border: Border.all(color: star, width: 1.5),
+                      onTap: () {
+                        app.setCoupon('${cp['code']}');
+                        app.toast('سيُطبَّق الرمز ${cp['code']} على طلبك من هذا المحل');
+                      },
+                      child: Row(children: [
+                        const StarBadge(size: 40, color: star, child: Icon(Icons.local_offer_rounded, color: ink, size: 20)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('${app.couponLabel(cp)}${asInt(cp['minOrder']) > 0 ? ' للطلبات من ${money(asInt(cp['minOrder']))}' : ''}',
+                                style: const TextStyle(fontWeight: FontWeight.w800)),
+                            Text(app.coupon == cp['code'] ? 'سيُطبَّق على طلبك ✓' : 'اضغط لاستعمال الرمز ${cp['code']}',
+                                style: const TextStyle(fontSize: 13)),
+                          ]),
+                        ),
+                      ]),
+                    ),
+                  ),
+                ),
+              if (sections.length > 1)
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 58,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                      itemCount: sections.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (_, i) => ChoiceChip(
+                        label: Text(sections[i].isEmpty ? 'منتجات' : sections[i]),
+                        selected: (section ?? sections.first) == sections[i],
+                        showCheckmark: false,
+                        onSelected: (_) => _jump(sections[i]),
+                      ),
+                    ),
+                  ),
+                ),
+              if (!app.productsLoaded)
+                const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())))
+              else if (prods.isEmpty)
+                const SliverToBoxAdapter(child: EmptyState(icon: Icons.inventory_2_outlined, title: 'لم يضف هذا المحل منتجاته بعد'))
+              else
+                for (final sec in sections) ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      key: keys[sec],
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+                      child: Text(sec.isEmpty ? 'منتجات' : sec, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 19)),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Box(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                        child: Column(children: [
+                          for (final (i, p) in prods.where((p) => '${p['section'] ?? ''}' == sec).indexed) ...[
+                            if (i > 0) Divider(height: 1, color: Theme.of(context).dividerColor),
+                            _ProductTile(p: p, cat: '${s['cat']}', open: open),
+                          ],
+                        ]),
+                      ),
+                    ),
+                  ),
+                ],
+              if (asInt(s['ratingCount']) > 0)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                    child: Box(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          Expanded(child: Text('آراء الزبائن', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 19))),
+                          RatingChip(s),
+                        ]),
+                        const SizedBox(height: 8),
+                        if (reviews == null)
+                          OutlinedButton(onPressed: loadingReviews ? null : _loadReviews, child: const Text('اعرض التعليقات'))
+                        else if (reviews!.isEmpty)
+                          Text('لا توجد تعليقات مكتوبة بعد.', style: TextStyle(color: hint))
+                        else
+                          for (final r in reviews!)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Row(children: [
+                                  Expanded(child: Text('${r['name'] ?? 'زبون'}', style: const TextStyle(fontWeight: FontWeight.w700))),
+                                  for (int k = 1; k <= 5; k++)
+                                    Icon(Icons.star_rounded, size: 16, color: k <= asInt(r['shop']) ? star : Theme.of(context).dividerColor),
+                                ]),
+                                if ('${r['comment'] ?? ''}'.isNotEmpty) Text('${r['comment']}'),
+                                Text(ago(asInt(r['createdAtMs'])), style: TextStyle(fontSize: 12, color: hint)),
+                              ]),
+                            ),
+                      ]),
+                    ),
+                  ),
+                ),
+              SliverToBoxAdapter(child: SizedBox(height: showBar ? 110 : 32)),
+            ]),
+            // بعد التمرير: شريط علوي باسم المحل خلف الزرين
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  opacity: collapsed ? 1 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: Container(
+                    height: top + 64,
+                    padding: EdgeInsets.fromLTRB(72, top, 72, 0),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+                    ),
+                    child: Text('${s['name']}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 18)),
+                  ),
+                ),
+              ),
+            ),
+            // زرا الرجوع والمفضلة ثابتان فوق الغلاف
+            PositionedDirectional(
+              top: top + 10,
+              start: 14,
+              child: FloatBtn(icon: Icons.arrow_back_rounded, tooltip: 'رجوع', onTap: () => Navigator.of(context).maybePop()),
+            ),
+            PositionedDirectional(
+              top: top + 10,
+              end: 14,
+              child: FloatBtn(
+                icon: fav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                color: brand,
+                tooltip: fav ? 'إزالة من المفضلة' : 'أضف إلى المفضلة',
+                onTap: () => app.toggleFav(s['id']),
+              ),
+            ),
+            // شريط السلة: نيلي، والزر بلون الهريسة
+            if (showBar)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(context).padding.bottom + 14,
+                child: Material(
+                  color: dark ? const Color(0xFF2A3550) : ink,
+                  borderRadius: BorderRadius.circular(18),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: () {
+                      tab.value = 3;
+                      Navigator.of(context).popUntil((r) => r.isFirst);
+                    },
+                    child: SizedBox(
+                      height: 62,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(children: [
+                          Expanded(
+                            child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text('سلتك: ${itemsText(ci.count)}', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12.5)),
+                              Text(money(ci.subtotal),
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontSize: 19, height: 1.15)),
+                            ]),
+                          ),
+                          Container(
+                            height: 42,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(color: brand, borderRadius: BorderRadius.circular(12)),
+                            child: const Text('عرض السلة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                          ),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ]),
         );
       },
+    );
+  }
+}
+
+/// «2 منتجان»، «3 منتجات»، «11 منتجاً»
+String itemsText(int n) => n == 1
+    ? 'منتج واحد'
+    : n == 2
+        ? 'منتجان'
+        : (n % 100 >= 3 && n % 100 <= 10)
+            ? '$n منتجات'
+            : '$n منتجاً';
+
+/// بطاقة يوميات المحل: صورة اليومية أو نصها على لون الهريسة الداكن، مع حلقة إذا لم تُشاهد
+class _StoryTile extends StatelessWidget {
+  final Doc shop, story;
+  final bool wide;
+  const _StoryTile({required this.shop, required this.story, required this.wide});
+
+  @override
+  Widget build(BuildContext context) {
+    final img = app.postImage(story);
+    final seen = app.storySeen(shop);
+    final text = '${story['text'] ?? ''}';
+    return Semantics(
+      button: true,
+      label: 'يوميات المحل اليوم${seen ? '' : '، جديدة'}',
+      child: Material(
+        color: brandDark,
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => openStories(context, [shop], 0),
+          child: SizedBox(
+            width: wide ? double.infinity : 112,
+            height: 148,
+            child: Stack(fit: StackFit.expand, children: [
+              if (img != null) Image.memory(img, fit: BoxFit.cover, gaplessPlayback: true) else const Zellige(opacity: 0.1),
+              if (img != null)
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.center, colors: [Colors.black54, Colors.transparent]),
+                  ),
+                ),
+              PositionedDirectional(
+                top: 10,
+                start: 10,
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: seen ? Colors.white54 : Colors.white, width: 2.5),
+                  ),
+                  child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 16),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Align(
+                  alignment: AlignmentDirectional.bottomStart,
+                  child: Text(
+                    text.isNotEmpty && img == null ? text : 'يوميات اليوم',
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontSize: 15, height: 1.3),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -272,58 +442,66 @@ class _ProductTile extends StatelessWidget {
     final opt = hasOpts(p);
     final simpleLine = app.cart[p['id']];
     final hint = Theme.of(context).hintColor;
-    Widget right;
+    Widget? trailing;
     if (off) {
-      right = const Pill('نفد حالياً');
+      trailing = null;
     } else if (!opt && simpleLine != null) {
-      right = QtyStepper(
+      trailing = QtyStepper(
         qty: simpleLine.qty,
         enabled: open,
         onAdd: () => app.changeQty(p['id'], 1),
         onSub: () => app.changeQty(p['id'], -1),
       );
     } else {
-      right = IconButton.filled(
+      trailing = IconButton(
         tooltip: 'أضف ${p['name']}',
         onPressed: open ? () => addProduct(context, p) : null,
-        icon: const Icon(Icons.add_rounded),
-        style: IconButton.styleFrom(backgroundColor: ink, foregroundColor: Colors.white, shape: const CircleBorder()),
+        icon: const Icon(Icons.add_rounded, size: 24),
+        style: IconButton.styleFrom(
+          backgroundColor: brand,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: isDark(context) ? Colors.white12 : const Color(0xFFE3E7ED),
+          fixedSize: const Size(44, 44),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
       );
     }
-    return Opacity(
-      opacity: off ? 0.6 : 1,
-      child: Box(
-        padding: const EdgeInsets.all(12),
-        onTap: off ? null : () => openProductSheet(context, p),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          ItemThumb(product: p, cat: cat, size: 96),
-          const SizedBox(width: 12),
+    return InkWell(
+      onTap: off ? null : () => openProductSheet(context, p),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(children: [
           Expanded(
-            child: SizedBox(
-              height: 96,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(child: Text('${p['name']}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15))),
-                  if (n > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                      decoration: BoxDecoration(color: brand, borderRadius: BorderRadius.circular(10)),
-                      child: Text('×$n', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
-                    ),
-                ]),
-                if ('${p['desc'] ?? ''}'.isNotEmpty)
-                  Text('${p['desc']}', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.5, color: hint)),
-                const Spacer(),
-                Row(children: [
-                  Expanded(
-                    child: Text('${optList(p['sizes']).isNotEmpty ? 'من ' : ''}${money(basePrice(p))}',
-                        style: const TextStyle(fontWeight: FontWeight.w800, color: brand, fontSize: 15)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Flexible(
+                  child: Text('${p['name']}',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: off ? hint : null)),
+                ),
+                if (n > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                    decoration: BoxDecoration(color: tea, borderRadius: BorderRadius.circular(8)),
+                    child: Text('×$n', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
                   ),
-                  right,
-                ]),
+                ],
               ]),
-            ),
+              if ('${p['desc'] ?? ''}'.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text('${p['desc']}', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: hint)),
+                ),
+              const SizedBox(height: 4),
+              Text(
+                off ? 'نفد حالياً' : '${optList(p['sizes']).isNotEmpty ? 'من ' : ''}${money(basePrice(p))}',
+                style: off ? TextStyle(fontSize: 13, color: hint) : TextStyle(fontWeight: FontWeight.w700, color: accentOf(context), fontSize: 15),
+              ),
+            ]),
           ),
+          const SizedBox(width: 12),
+          Opacity(opacity: off ? 0.5 : 1, child: ItemThumb(product: p, cat: cat, size: 76)),
+          if (trailing != null) ...[const SizedBox(width: 10), trailing],
         ]),
       ),
     );
@@ -412,7 +590,7 @@ class _ProductSheetState extends State<_ProductSheet> {
           Flexible(
             child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(18, 0, 18, 8), children: [
               const SizedBox(height: 4),
-              // رأس المنتج مثل صفحة «Yummy! Noodles»: الاسم والسعر بالأخضر، معلومات صغيرة، وصورة كبيرة في دائرة
+              // رأس المنتج: الاسم والسعر، معلومات صغيرة، وصورة كبيرة
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(
                   child: Text('${p['name']}',
@@ -420,7 +598,7 @@ class _ProductSheetState extends State<_ProductSheet> {
                 ),
                 const SizedBox(width: 10),
                 Text(money(needSize && size.isEmpty ? basePrice(p) : linePrice(p, size, const [])),
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 22, color: brand)),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24, color: accentOf(context))),
               ]),
               const SizedBox(height: 14),
               Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
@@ -447,14 +625,14 @@ class _ProductSheetState extends State<_ProductSheet> {
                 const SizedBox(height: 14),
                 Row(children: [
                   const Expanded(child: Text('اختر الحجم', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
-                  const Pill('مطلوب', bg: Color(0xFFFCE9DC), fg: Color(0xFF8A3414)),
+                  const Pill('مطلوب', bg: brandSoft, fg: brandDark),
                 ]),
                 for (final z in sizes)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     onTap: () => setState(() => size = '${z['name']}'),
                     leading: Icon(size == z['name'] ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-                        color: size == z['name'] ? brand : hint),
+                        color: size == z['name'] ? accentOf(context) : hint),
                     title: Text('${z['name']}'),
                     trailing: Text(money(asInt(z['price'])), style: TextStyle(color: hint)),
                   ),
@@ -485,7 +663,7 @@ class _ProductSheetState extends State<_ProductSheet> {
                 decoration: const InputDecoration(labelText: 'ملاحظة على هذا المنتج (اختياري)', hintText: 'مثال: بدون بصل، حار قليلاً'),
               ),
               if (!open)
-                const Text('المحل مغلق الآن.', style: TextStyle(color: Color(0xFF8A3414), fontWeight: FontWeight.w600)),
+                Text('المحل مغلق الآن.', style: TextStyle(color: accentOf(context), fontWeight: FontWeight.w600)),
             ]),
           ),
           SafeArea(
@@ -508,7 +686,7 @@ class _ProductSheetState extends State<_ProductSheet> {
                         : null,
                     child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Flexible(
-                        child: Text(needSize && size.isEmpty ? 'اختر الحجم أولاً' : 'أضف · ${money(unit * qty)}',
+                        child: Text(needSize && size.isEmpty ? 'اختر الحجم أولاً' : 'أضف بـ ${money(unit * qty)}',
                             maxLines: 1, overflow: TextOverflow.ellipsis),
                       ),
                       if (!(needSize && size.isEmpty)) ...[const SizedBox(width: 8), const Icon(Icons.arrow_forward_rounded, size: 20)],
@@ -524,47 +702,55 @@ class _ProductSheetState extends State<_ProductSheet> {
   }
 }
 
-/// إعلان من المحل: صورة اختيارية ونص
+/// إعلان من المحل: إطار زعفراني وشارة «إعلان»، وصورة اختيارية
 class _AdCard extends StatelessWidget {
   final Doc ad;
-  const _AdCard({required this.ad});
+  final bool compact;
+  const _AdCard({required this.ad, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
     final img = app.postImage(ad);
     final hint = Theme.of(context).hintColor;
-    return Box(
-      padding: EdgeInsets.zero,
+    final text = '${ad['text'] ?? ''}';
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: star, width: 1.5),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (ad['img'] == true)
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-            child: AspectRatio(
-              aspectRatio: 16 / 9,
-              child: img != null
-                  ? Image.memory(img, fit: BoxFit.cover, gaplessPlayback: true)
-                  : ColoredBox(color: Theme.of(context).colorScheme.surfaceContainerHighest),
-            ),
+        if (ad['img'] == true && !compact)
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: img != null
+                ? Image.memory(img, fit: BoxFit.cover, gaplessPlayback: true)
+                : ColoredBox(color: Theme.of(context).colorScheme.surfaceContainerHighest),
           ),
         Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Pill('إعلان', bg: Color(0xFFE3ECF7), fg: info, icon: Icons.campaign_rounded),
-              const SizedBox(width: 8),
-              Text(ago(asInt(ad['at'])), style: TextStyle(color: hint, fontSize: 12)),
-            ]),
-            if ('${ad['text'] ?? ''}'.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+              decoration: BoxDecoration(color: star, borderRadius: BorderRadius.circular(8)),
+              child: const Text('إعلان', style: TextStyle(color: ink, fontSize: 12, fontWeight: FontWeight.w700)),
+            ),
+            if (text.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text('${ad['text']}', style: const TextStyle(fontSize: 15, height: 1.45)),
+              Text(text,
+                  maxLines: compact ? 3 : null,
+                  overflow: compact ? TextOverflow.ellipsis : null,
+                  style: const TextStyle(fontSize: 14.5, height: 1.5)),
             ],
+            const SizedBox(height: 6),
+            Text(ago(asInt(ad['at'])), style: TextStyle(color: hint, fontSize: 12)),
           ]),
         ),
       ]),
     );
   }
 }
-
 
 class _Stat extends StatelessWidget {
   final String value, label;

@@ -141,7 +141,7 @@ String optsText(Map i) {
   final ex = i['extras'];
   if (ex is List && ex.isNotEmpty) a.add('+ ${ex.join('، ')}');
   if ((i['note'] ?? '').toString().isNotEmpty) a.add('«${i['note']}»');
-  return a.join(' · ');
+  return a.join('، ');
 }
 
 class CartLine {
@@ -185,8 +185,8 @@ class CartInfo {
 }
 
 class AppState extends ChangeNotifier {
-  final FirebaseFirestore fs = FirebaseFirestore.instance;
-  final FirebaseAuth auth = FirebaseAuth.instance;
+  late final FirebaseFirestore fs = FirebaseFirestore.instance;
+  late final FirebaseAuth auth = FirebaseAuth.instance;
   late SharedPreferences _prefs;
 
   User? user;
@@ -559,7 +559,7 @@ class AppState extends ChangeNotifier {
   bool isOpen(Doc? s) => s != null && s['open'] == true && withinHours(s);
   String closedLabel(Doc s) {
     final h = s['hours'];
-    if (s['open'] == true && !withinHours(s) && h is Map) return 'مغلق · يفتح ${h['from']}';
+    if (s['open'] == true && !withinHours(s) && h is Map) return 'مغلق، يفتح ${h['from']}';
     return 'مغلق';
   }
 
@@ -659,10 +659,10 @@ class AppState extends ChangeNotifier {
 
   String orderTitle(Doc o) => isAny(o) ? 'اشترِ لي${(o['anyFrom'] ?? '').toString().isNotEmpty ? ': ${o['anyFrom']}' : ''}' : '${o['shopName'] ?? ''}';
   String orderLines(Doc o) {
-    if (isAny(o)) return '${o['anyText'] ?? ''}'.split('\n').where((x) => x.trim().isNotEmpty).join(' · ');
+    if (isAny(o)) return '${o['anyText'] ?? ''}'.split('\n').where((x) => x.trim().isNotEmpty).join('، ');
     final it = o['items'];
     if (it is! List) return '';
-    return it.map((i) => '${asInt(i['qty'])}× ${i['name']}').join(' · ');
+    return it.map((i) => '${i['name']} × ${asInt(i['qty'])}').join('، ');
   }
 
   int? etaMin(Doc o) {

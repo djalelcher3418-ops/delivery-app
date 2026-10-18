@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,7 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../store.dart';
 import '../ui.dart';
 import 'chat.dart';
-import 'home.dart' show Pulse;
 
 class TrackScreen extends StatefulWidget {
   final String orderId;
@@ -63,213 +63,270 @@ class _TrackScreenState extends State<TrackScreen> {
         final live = activeStatuses.contains(st);
         final hint = Theme.of(context).hintColor;
 
-        // steps
+        // المراحل: اسم قصير تحت كل شريط، ووصف المرحلة الحالية تحتها
         List<List<String>> steps;
         int idx;
         if (any) {
           steps = [
-            ['تم إرسال الطلب', 'نبحث لك عن موصّل قريب'],
-            ['الموصّل يشتري طلبك', 'من ${'${o['anyFrom'] ?? ''}'.isEmpty ? 'أقرب محل' : o['anyFrom']}'],
+            ['أُرسل', 'نبحث لك عن موصّل قريب'],
+            ['يشتري', 'الموصّل يشتري طلبك من ${'${o['anyFrom'] ?? ''}'.isEmpty ? 'أقرب محل' : o['anyFrom']}'],
             ['في الطريق', 'الموصّل في طريقه إليك'],
-            ['تم التوصيل', 'ادفع الثمن حسب الوصل + التوصيل'],
+            ['وصل', 'ادفع الثمن حسب الوصل مع التوصيل'],
           ];
           idx = st == 'prep' ? (o['courierUid'] != null ? 1 : 0) : st == 'road' ? 2 : st == 'done' ? 3 : -1;
         } else {
           steps = [
-            ['تم إرسال الطلب', 'وصل طلبك إلى المحل'],
-            ['المحل يحضّر الطلب', 'قبل المحل طلبك'],
-            ['الطلب جاهز', 'ينتظر وصول الموصّل'],
+            ['أُرسل', 'وصل طلبك إلى المحل'],
+            ['يُحضَّر', 'قبل المحل طلبك ويحضّره'],
+            ['جاهز', 'الطلب جاهز وينتظر الموصّل'],
             ['في الطريق', 'الموصّل في طريقه إليك'],
-            ['تم التوصيل', 'ادفع نقداً للموصّل'],
+            ['وصل', 'ادفع نقداً للموصّل'],
           ];
           idx = const ['new', 'prep', 'ready', 'road', 'done'].indexOf(st);
         }
 
-        // map points
+        // نقاط الخريطة: المحل بالأخضر، الموصّل بالهريسة، والبيت بالنيلي
         final s = app.shop(o['shopId']);
         final pts = <_Pt>[];
-        if (!any && s != null && s['lat'] != null && st != 'road') pts.add(_Pt('s', asD(s['lat'])!, asD(s['lng'])!, Icons.storefront_rounded, orange));
-        if (o['cLat'] != null && o['courierUid'] != null && live) pts.add(_Pt('c', asD(o['cLat'])!, asD(o['cLng'])!, Icons.delivery_dining_rounded, info));
-        if (o['custLat'] != null) pts.add(_Pt('h', asD(o['custLat'])!, asD(o['custLng'])!, Icons.home_rounded, brand));
+        if (!any && s != null && s['lat'] != null && st != 'road') pts.add(_Pt('s', asD(s['lat'])!, asD(s['lng'])!, Icons.storefront_rounded, tea));
+        if (o['cLat'] != null && o['courierUid'] != null && live) {
+          pts.add(_Pt('c', asD(o['cLat'])!, asD(o['cLng'])!, Icons.delivery_dining_rounded, brand));
+        }
+        if (o['custLat'] != null) pts.add(_Pt('h', asD(o['custLat'])!, asD(o['custLng'])!, Icons.home_rounded, ink, square: true));
         final showMap = live && pts.isNotEmpty && (o['courierUid'] != null || st != 'new');
         final eta = live ? app.etaMin(o) : null;
+        final top = MediaQuery.of(context).padding.top;
+        final topH = showMap ? 330.0 : 170 + top;
+        final dark = isDark(context);
+        final surface = Theme.of(context).colorScheme.surface;
+        final subtitle = '${app.orderTitle(o)}، طلب رقم ${o['no'] ?? ''}';
 
-        return Scaffold(
-          body: CustomScrollView(slivers: [
-            SliverAppBar(
-              pinned: true,
-              expandedHeight: 150,
-              foregroundColor: Colors.white,
-              backgroundColor: any ? const Color(0xFFB45F06) : brandDark,
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsetsDirectional.only(start: 56, bottom: 14, end: 16),
-                title: Text(app.headOf(o), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17)),
-                background: Container(
-                  decoration: BoxDecoration(gradient: any ? anyGradient : heroGradient),
-                  padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 56, 20, 0),
-                  alignment: AlignmentDirectional.topStart,
-                  child: Text('طلب رقم ${o['no'] ?? ''} · ${app.orderTitle(o)}', style: const TextStyle(color: Colors.white70)),
-                ),
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: showMap && !dark ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light,
+          child: Scaffold(
+          backgroundColor: surface,
+          body: Stack(children: [
+            CustomScrollView(slivers: [
+              SliverToBoxAdapter(
+                child: Stack(children: [
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: topH,
+                    child: showMap
+                        ? _LiveMap(key: ValueKey('${o['id']}|${pts.map((p) => p.k).join()}'), pts: pts)
+                        : ColoredBox(
+                            color: any ? ink : brand,
+                            child: Stack(children: [
+                              const Zellige(),
+                              PositionedDirectional(
+                                end: 24,
+                                top: top + 34,
+                                child: Icon(any ? Icons.shopping_bag_rounded : Icons.receipt_long_rounded,
+                                    size: 84, color: Colors.white.withValues(alpha: 0.9)),
+                              ),
+                            ]),
+                          ),
+                  ),
+                  // الورقة البيضاء
+                  Container(
+                    margin: EdgeInsets.only(top: topH - 28),
+                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
+                    decoration: BoxDecoration(color: surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(28))),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      Row(children: [
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(app.headOf(o), style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 25, height: 1.2)),
+                            const SizedBox(height: 4),
+                            Text(subtitle, style: TextStyle(color: hint, fontSize: 14)),
+                          ]),
+                        ),
+                        if (eta != null) ...[
+                          const SizedBox(width: 12),
+                          Semantics(
+                            label: 'يصل خلال $eta ${minutesWord(eta)} تقريباً',
+                            excludeSemantics: true,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(color: dark ? brand.withValues(alpha: 0.25) : brandSoft, borderRadius: BorderRadius.circular(18)),
+                              child: Column(children: [
+                                Text('$eta',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(fontSize: 30, height: 1, color: dark ? Colors.white : brandDark)),
+                                Text(minutesWord(eta), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: dark ? Colors.white : brandDark)),
+                              ]),
+                            ),
+                          ),
+                        ],
+                      ]),
+                      if (o['scheduledFor'] != null) ...[
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Pill(schedText(asInt(o['scheduledFor'])), icon: Icons.schedule_rounded, bg: inkSoft, fg: ink),
+                        ),
+                      ],
+                      const SizedBox(height: 18),
+                      if (idx >= 0) ...[
+                        Steps(labels: [for (final x in steps) x[0]], index: idx, finished: st == 'done'),
+                        const SizedBox(height: 10),
+                        Text(steps[idx][1], style: TextStyle(color: hint, fontSize: 13.5)),
+                        if (showMap && o['cAt'] != null)
+                          Text('آخر موقع للموصّل ${ago(asInt(o['cAt']))}', style: TextStyle(fontSize: 12, color: hint)),
+                      ] else
+                        Box(
+                          color: dark ? brand.withValues(alpha: 0.25) : brandSoft,
+                          child: Text(st == 'rejected' ? 'اعتذر المحل عن هذا الطلب، ولن تدفع شيئاً.' : 'أُلغي هذا الطلب، ولن تدفع شيئاً.',
+                              style: TextStyle(color: dark ? Colors.white : brandDark, fontWeight: FontWeight.w600)),
+                        ),
+                      if (st == 'done' && o['rated'] != true) ...[const SizedBox(height: 18), _rateCard(o)],
+                      if (o['courierUid'] != null && st != 'done') ...[
+                        const SizedBox(height: 18),
+                        _courierCard(o),
+                      ],
+                      const SizedBox(height: 22),
+                      _details(o, hint, live),
+                      const SizedBox(height: 18),
+                      Divider(height: 1, color: Theme.of(context).dividerColor),
+                      const SizedBox(height: 14),
+                      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Icon(Icons.place_outlined, color: hint, size: 22),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('${o['zoneName'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                            if ('${o['address'] ?? ''}'.isNotEmpty) Text('${o['address']}', style: TextStyle(color: hint)),
+                          ]),
+                        ),
+                      ]),
+                      const SizedBox(height: 20),
+                      if (st == 'new' || (any && st == 'prep' && o['courierUid'] == null))
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(foregroundColor: dark ? const Color(0xFFF08A5D) : danger),
+                          onPressed: () => _confirm('إلغاء الطلب؟', 'لن تدفع شيئاً.', 'نعم، ألغِ', () => app.setStatus(o['id'], 'cancelled')),
+                          child: const Text('إلغاء الطلب'),
+                        ),
+                      if (st == 'road')
+                        FilledButton(
+                          onPressed: () => _confirm('استلمت طلبك؟', 'سجّل الاستلام بعد أن تدفع للموصّل.', 'نعم، استلمت',
+                              () => app.setStatus(o['id'], 'done', {'doneAt': nowMs()})),
+                          child: const Text('استلمت طلبي ودفعت'),
+                        ),
+                    ]),
+                  ),
+                ]),
               ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-              sliver: SliverList.list(children: [
-                if (st == 'done' && o['rated'] != true) ...[_rateCard(o), const SizedBox(height: 12)],
-                if (live) ...[
-                  Box(
-                    child: Row(children: [
-                      const Pulse(),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(st == 'road' ? 'يصلك الموصّل خلال' : 'الوصول المتوقع', style: TextStyle(color: hint, fontSize: 13)),
-                          Text(eta != null ? '$eta دقيقة تقريباً' : app.headOf(o),
-                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: eta != null ? 22 : 16, color: brand)),
-                        ]),
-                      ),
-                      if (o['scheduledFor'] != null)
-                        Pill(schedText(asInt(o['scheduledFor'])), icon: Icons.schedule_rounded, bg: const Color(0xFFE3ECF7), fg: info),
-                    ]),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (showMap) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: SizedBox(height: 240, child: _LiveMap(key: ValueKey('${o['id']}|${pts.map((p) => p.k).join()}'), pts: pts)),
-                  ),
-                  if (o['cAt'] != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text('آخر موقع للموصّل ${ago(asInt(o['cAt']))}', style: TextStyle(fontSize: 12, color: hint)),
-                    ),
-                  const SizedBox(height: 12),
-                ],
-                if (idx >= 0)
-                  Steps(steps: steps, index: idx, finished: st == 'done')
-                else
-                  Box(
-                    color: const Color(0xFFFCE9DC),
-                    child: Text(st == 'rejected' ? 'اعتذر المحل عن هذا الطلب، ولن تدفع شيئاً.' : 'أُلغي هذا الطلب، ولن تدفع شيئاً.',
-                        style: const TextStyle(color: Color(0xFF8A3414), fontWeight: FontWeight.w600)),
-                  ),
-                const SizedBox(height: 12),
-                if (o['courierUid'] != null && st != 'done') ...[
-                  Box(
-                    child: Row(children: [
-                      const CircleAvatar(radius: 24, backgroundColor: Color(0xFFE3ECF7), child: Icon(Icons.delivery_dining_rounded, color: info)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('${o['courierName'] ?? 'الموصّل'}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                          Text('موصّلك', style: TextStyle(color: hint, fontSize: 13)),
-                        ]),
-                      ),
-                      Badge(
-                        isLabelVisible: app.unread(o),
-                        smallSize: 12,
-                        backgroundColor: orange,
-                        child: IconButton.filled(
-                          tooltip: 'راسل الموصّل',
-                          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatScreen(orderId: o['id']))),
-                          icon: const Icon(Icons.chat_rounded),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      if ('${o['courierPhone'] ?? ''}'.isNotEmpty)
-                        IconButton.filled(
-                          tooltip: 'اتصل بالموصّل',
-                          style: IconButton.styleFrom(backgroundColor: info),
-                          onPressed: () => _call('${o['courierPhone']}'),
-                          icon: const Icon(Icons.call_rounded),
-                        ),
-                    ]),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (live) ...[
-                  Box(
-                    color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF332A17) : const Color(0xFFF6EED8),
-                    child: Row(children: [
-                      Expanded(child: Text(any && o['anyPaid'] == null ? 'تدفع عند الاستلام (تقريباً)' : 'تدفع عند الاستلام')),
-                      Text(money(asInt(o['total'])), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                    ]),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                _details(o, hint),
-                const SizedBox(height: 12),
-                Box(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('العنوان', style: TextStyle(color: hint, fontSize: 13)),
-                    Text('${o['zoneName'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                    Text('${o['address'] ?? ''}'),
-                  ]),
-                ),
-                const SizedBox(height: 16),
-                if (st == 'new' || (any && st == 'prep' && o['courierUid'] == null))
-                  OutlinedButton(
-                    style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF9A2A12)),
-                    onPressed: () => _confirm('إلغاء الطلب؟', 'لن تدفع شيئاً.', 'نعم، ألغِ', () => app.setStatus(o['id'], 'cancelled')),
-                    child: const Text('إلغاء الطلب'),
-                  ),
-                if (st == 'road')
-                  FilledButton(
-                    onPressed: () => _confirm('استلمت طلبك؟', 'سجّل الاستلام بعد أن تدفع للموصّل.', 'نعم، استلمت',
-                        () => app.setStatus(o['id'], 'done', {'doneAt': nowMs()})),
-                    child: const Text('استلمت طلبي ودفعت'),
-                  ),
-              ]),
+            ]),
+            PositionedDirectional(
+              top: top + 10,
+              start: 14,
+              child: FloatBtn(icon: Icons.arrow_back_rounded, tooltip: 'رجوع', onTap: () => Navigator.of(context).maybePop()),
             ),
           ]),
+        ),
         );
       },
     );
   }
 
-  Widget _details(Doc o, Color hint) {
-    if (isAny(o)) {
-      final paid = o['anyPaid'];
-      return Box(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('تفاصيل الطلب', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 6),
-          Text('من: ${'${o['anyFrom'] ?? ''}'.isEmpty ? 'أي محل قريب' : o['anyFrom']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          Text('${o['anyText'] ?? ''}'),
-          const Divider(),
-          Line(paid != null ? 'ثمن المشتريات (حسب الوصل)' : 'الميزانية التقديرية', money(asInt(paid ?? o['anyBudget']))),
-          Line('التوصيل', money(asInt(o['fee']))),
-          Line(paid != null ? 'المجموع' : 'المجموع التقريبي', money(asInt(o['total'])), bold: true),
-        ]),
-      );
-    }
-    final items = (o['items'] as List?) ?? const [];
-    return Box(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('تفاصيل الطلب', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 6),
-        for (final i in items)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${asInt(i['qty'])}× ${i['name']}'),
-                  if (optsText(i).isNotEmpty) Text(optsText(i), style: TextStyle(fontSize: 12, color: hint)),
-                ]),
-              ),
-              Text(money(asInt(i['price']) * asInt(i['qty']))),
-            ]),
+  /// بطاقة الموصّل: الحرف الأول في دائرة نيلية، وزرا المراسلة والاتصال
+  Widget _courierCard(Doc o) {
+    final hint = Theme.of(context).hintColor;
+    final dark = isDark(context);
+    final name = '${o['courierName'] ?? 'الموصّل'}';
+    final sq = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: dark ? Colors.white.withValues(alpha: 0.06) : paper, borderRadius: BorderRadius.circular(18)),
+      child: Row(children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: dark ? const Color(0xFF2A3550) : ink,
+          child: Text(firstChar(name),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white, fontSize: 20)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('$name، الموصّل', style: const TextStyle(fontWeight: FontWeight.w700)),
+            Text('موصّلك لهذا الطلب', style: TextStyle(color: hint, fontSize: 13)),
+          ]),
+        ),
+        Badge(
+          isLabelVisible: app.unread(o),
+          smallSize: 12,
+          backgroundColor: brand,
+          child: IconButton(
+            tooltip: 'راسل الموصّل',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatScreen(orderId: o['id']))),
+            style: IconButton.styleFrom(
+              fixedSize: const Size(44, 44),
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
+              side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+              shape: sq,
+            ),
+            icon: const Icon(Icons.chat_bubble_outline_rounded, size: 21),
           ),
-        if ('${o['note'] ?? ''}'.isNotEmpty) Text('ملاحظة: ${o['note']}', style: TextStyle(color: hint)),
-        const Divider(),
-        if (asInt(o['discount']) > 0) Line('خصم الكوبون ${o['coupon'] ?? ''}', '−${money(asInt(o['discount']))}', color: brand),
-        Line('التوصيل', money(asInt(o['fee']))),
-        Line('المجموع', money(asInt(o['total'])), bold: true),
+        ),
+        if ('${o['courierPhone'] ?? ''}'.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'اتصل بالموصّل',
+            onPressed: () => _call('${o['courierPhone']}'),
+            style: IconButton.styleFrom(fixedSize: const Size(44, 44), backgroundColor: tea, foregroundColor: Colors.white, shape: sq),
+            icon: const Icon(Icons.call_rounded, size: 21),
+          ),
+        ],
       ]),
     );
+  }
+
+  Widget _details(Doc o, Color hint, bool live) {
+    final payLabel = live ? 'تدفع عند الاستلام' : 'المجموع';
+    final title = Text('تفاصيل الطلب', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 18));
+    if (isAny(o)) {
+      final paid = o['anyPaid'];
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        title,
+        const SizedBox(height: 6),
+        Text('من: ${'${o['anyFrom'] ?? ''}'.isEmpty ? 'أي محل قريب' : o['anyFrom']}', style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        Text('${o['anyText'] ?? ''}'),
+        const SizedBox(height: 8),
+        Line(paid != null ? 'ثمن المشتريات (حسب الوصل)' : 'الميزانية التقديرية', money(asInt(paid ?? o['anyBudget']))),
+        Line('التوصيل', money(asInt(o['fee']))),
+        Divider(color: Theme.of(context).dividerColor),
+        Line(live && paid == null ? '$payLabel (تقريباً)' : payLabel, money(asInt(o['total'])), bold: true),
+      ]);
+    }
+    final items = (o['items'] as List?) ?? const [];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      title,
+      const SizedBox(height: 6),
+      for (final i in items)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${i['name']} × ${asInt(i['qty'])}', style: TextStyle(color: hint)),
+                if (optsText(i).isNotEmpty) Text(optsText(i), style: TextStyle(fontSize: 12, color: hint)),
+              ]),
+            ),
+            Text(money(asInt(i['price']) * asInt(i['qty']))),
+          ]),
+        ),
+      if ('${o['note'] ?? ''}'.isNotEmpty) Text('ملاحظة: ${o['note']}', style: TextStyle(color: hint)),
+      if (asInt(o['discount']) > 0) Line('خصم الكوبون ${o['coupon'] ?? ''}', '−${money(asInt(o['discount']))}', color: teaOf(context)),
+      Line('التوصيل', money(asInt(o['fee']))),
+      Divider(color: Theme.of(context).dividerColor),
+      Line(payLabel, money(asInt(o['total'])), bold: true),
+    ]);
   }
 
   Widget _stars(int value, ValueChanged<int> onPick) => Row(children: [
@@ -284,9 +341,10 @@ class _TrackScreenState extends State<TrackScreen> {
 
   Widget _rateCard(Doc o) {
     return Box(
-      border: Border.all(color: star, width: 2),
+      color: isDark(context) ? star.withValues(alpha: 0.14) : saffronSoft,
+      border: Border.all(color: star, width: 1.5),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text('كيف كان طلبك؟', style: Theme.of(context).textTheme.titleMedium),
+        Text('كيف كان طلبك؟', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 19)),
         if (!isAny(o)) ...[
           const SizedBox(height: 8),
           Text('${o['shopName']}', style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -326,7 +384,8 @@ class _Pt {
   final double lat, lng;
   final IconData icon;
   final Color color;
-  _Pt(this.k, this.lat, this.lng, this.icon, this.color);
+  final bool square;
+  _Pt(this.k, this.lat, this.lng, this.icon, this.color, {this.square = false});
 }
 
 class _LiveMap extends StatelessWidget {
@@ -342,7 +401,7 @@ class _LiveMap extends StatelessWidget {
         initialCenter: coords.first,
         initialZoom: 16,
         initialCameraFit: distinct > 1
-            ? CameraFit.coordinates(coordinates: coords, padding: const EdgeInsets.all(48), maxZoom: 17)
+            ? CameraFit.coordinates(coordinates: coords, padding: const EdgeInsets.fromLTRB(48, 72, 48, 64), maxZoom: 17)
             : null,
       ),
       children: [
@@ -351,14 +410,15 @@ class _LiveMap extends StatelessWidget {
           for (final p in pts)
             Marker(
               point: LatLng(p.lat, p.lng),
-              width: 42,
-              height: 42,
+              width: 44,
+              height: 44,
               child: Container(
                 decoration: BoxDecoration(
                   color: p.color,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                  boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 6)],
+                  shape: p.square ? BoxShape.rectangle : BoxShape.circle,
+                  borderRadius: p.square ? BorderRadius.circular(12) : null,
+                  border: Border.all(color: Colors.white, width: 4),
+                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6)],
                 ),
                 child: Icon(p.icon, color: Colors.white, size: 20),
               ),

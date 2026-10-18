@@ -151,7 +151,7 @@ class _AddressFormState extends State<AddressForm> {
         DropdownButtonFormField<String>(
           value: zone?['id'],
           decoration: const InputDecoration(labelText: 'الحي'),
-          items: [for (final z in zones) DropdownMenuItem(value: z['id'] as String, child: Text('${z['name']} · ${money(asInt(z['fee']))}'))],
+          items: [for (final z in zones) DropdownMenuItem(value: z['id'] as String, child: Text('${z['name']}، التوصيل ${money(asInt(z['fee']))}'))],
           onChanged: (v) {
             if (v != null) app.setZone(v);
           },
@@ -169,9 +169,9 @@ class _AddressFormState extends State<AddressForm> {
         const SizedBox(height: 10),
         if (app.lat != null)
           Row(children: [
-            const Icon(Icons.check_circle_rounded, color: brand, size: 20),
+            Icon(Icons.check_circle_rounded, color: teaOf(context), size: 20),
             const SizedBox(width: 6),
-            const Expanded(child: Text('أُضيف موقعك على الخريطة', style: TextStyle(color: brand, fontWeight: FontWeight.w600))),
+            Expanded(child: Text('أُضيف موقعك على الخريطة', style: TextStyle(color: teaOf(context), fontWeight: FontWeight.w600))),
             TextButton(
               onPressed: () => setState(() {
                 app.lat = null;

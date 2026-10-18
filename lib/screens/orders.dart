@@ -75,7 +75,7 @@ class OrdersScreen extends StatelessWidget {
                           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                             Row(children: [
                               if (isAny(o)) ...[
-                                const Pill('أي شيء', bg: Color(0xFFFFF1DC), fg: Color(0xFF8A4B00)),
+                                const Pill('أي شيء', bg: inkSoft, fg: ink),
                                 const SizedBox(width: 6),
                               ],
                               Expanded(
@@ -91,18 +91,18 @@ class OrdersScreen extends StatelessWidget {
                                 child: Align(
                                   alignment: AlignmentDirectional.centerStart,
                                   child: Pill('مجدول ${schedText(asInt(o['scheduledFor']))}',
-                                      icon: Icons.schedule_rounded, bg: const Color(0xFFE3ECF7), fg: info),
+                                      icon: Icons.schedule_rounded, bg: inkSoft, fg: ink),
                                 ),
                               ),
                             if (app.unread(o))
-                              const Padding(
-                                padding: EdgeInsets.only(top: 6),
-                                child: Text('رسالة جديدة من الموصّل', style: TextStyle(color: orange, fontWeight: FontWeight.w700)),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text('رسالة جديدة من الموصّل', style: TextStyle(color: accentOf(context), fontWeight: FontWeight.w700)),
                               ),
                             const SizedBox(height: 6),
                             Row(children: [
-                              Expanded(child: Text('طلب رقم ${o['no'] ?? ''} · ${ago(asInt(o['createdAtMs']))}', style: TextStyle(color: hint, fontSize: 13))),
-                              Text(money(asInt(o['total'])), style: const TextStyle(fontWeight: FontWeight.w700)),
+                              Expanded(child: Text('طلب رقم ${o['no'] ?? ''}، ${ago(asInt(o['createdAtMs']))}', style: TextStyle(color: hint, fontSize: 13))),
+                              Text(money(asInt(o['total'])), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 17)),
                             ]),
                             if (rate || again) ...[
                               const SizedBox(height: 10),
@@ -110,7 +110,7 @@ class OrdersScreen extends StatelessWidget {
                                 if (rate)
                                   Expanded(
                                     child: FilledButton.icon(
-                                      style: FilledButton.styleFrom(backgroundColor: star, foregroundColor: Colors.black87, minimumSize: const Size(0, 44)),
+                                      style: FilledButton.styleFrom(backgroundColor: star, foregroundColor: ink, minimumSize: const Size(0, 44)),
                                       onPressed: open,
                                       icon: const Icon(Icons.star_rounded),
                                       label: const Text('قيّم الطلب'),

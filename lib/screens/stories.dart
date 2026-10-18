@@ -19,7 +19,7 @@ class StoriesRow extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('يوميات المحلات', style: Theme.of(context).textTheme.titleMedium),
+          child: Text('يوميات المحلات', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 19)),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -65,8 +65,7 @@ class StoryAvatar extends StatelessWidget {
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: seen ? null : const LinearGradient(colors: [Color(0xFFE8890C), Color(0xFFC2410C), Color(0xFF0F6B4F)]),
-                color: seen ? Theme.of(context).dividerColor : null,
+                color: seen ? (isDark(context) ? Colors.white24 : const Color(0xFFC9CED8)) : brand,
               ),
               child: Container(
                 padding: const EdgeInsets.all(2),
@@ -216,14 +215,18 @@ class _StoryViewerState extends State<StoryViewer> with SingleTickerProviderStat
           else if (p['img'] == true)
             const Center(child: CircularProgressIndicator(color: Colors.white))
           else
-            Container(
-              decoration: const BoxDecoration(gradient: heroGradient),
-              padding: const EdgeInsets.all(28),
-              alignment: Alignment.center,
-              child: Text(text,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700, height: 1.4)),
-            ),
+            Stack(fit: StackFit.expand, children: [
+              const ColoredBox(color: brandDark),
+              const Zellige(opacity: 0.1),
+              Padding(
+                padding: const EdgeInsets.all(28),
+                child: Center(
+                  child: Text(text,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontSize: 28, height: 1.4)),
+                ),
+              ),
+            ]),
           // الأعلى: أشرطة التقدم واسم المحل
           SafeArea(
             child: Padding(
@@ -283,7 +286,7 @@ class _StoryViewerState extends State<StoryViewer> with SingleTickerProviderStat
                   const SizedBox(height: 12),
                 ],
                 FilledButton.icon(
-                  style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black87),
+                  style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: ink),
                   onPressed: () {
                     timer.stop();
                     final nav = Navigator.of(context);
@@ -316,7 +319,7 @@ class AdsRow extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text('إعلانات المحلات', style: Theme.of(context).textTheme.titleMedium),
+          child: Text('إعلانات المحلات', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 19)),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -332,29 +335,43 @@ class AdsRow extends StatelessWidget {
               final c = catOf(s['cat']);
               return SizedBox(
                 width: 250,
-                child: Box(
-                  padding: EdgeInsets.zero,
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShopScreen(shopId: '${s['id']}'))),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-                      child: SizedBox(
-                        height: 110,
-                        child: img != null
-                            ? Image.memory(img, fit: BoxFit.cover, gaplessPlayback: true)
-                            : ColoredBox(color: c.bg, child: Icon(Icons.campaign_rounded, color: c.fg, size: 44)),
+                child: Material(
+                  color: Theme.of(context).colorScheme.surface,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: star, width: 1.5)),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShopScreen(shopId: '${s['id']}'))),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      SizedBox(
+                        height: 104,
+                        child: Stack(fit: StackFit.expand, children: [
+                          img != null
+                              ? Image.memory(img, fit: BoxFit.cover, gaplessPlayback: true)
+                              : ColoredBox(
+                                  color: isDark(context) ? c.fg.withValues(alpha: 0.3) : c.bg,
+                                  child: Icon(Icons.campaign_rounded, color: isDark(context) ? Colors.white70 : c.fg, size: 44)),
+                          PositionedDirectional(
+                            top: 10,
+                            start: 10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                              decoration: BoxDecoration(color: star, borderRadius: BorderRadius.circular(8)),
+                              child: const Text('إعلان', style: TextStyle(color: ink, fontSize: 12, fontWeight: FontWeight.w700)),
+                            ),
+                          ),
+                        ]),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                      child: Text('${s['name']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 2, 12, 0),
-                      child: Text('${ad['text'] ?? ''}',
-                          maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: hint, fontSize: 13, height: 1.35)),
-                    ),
-                  ]),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                        child: Text('${s['name']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 2, 12, 0),
+                        child: Text('${ad['text'] ?? ''}',
+                            maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: hint, fontSize: 13, height: 1.35)),
+                      ),
+                    ]),
+                  ),
                 ),
               );
             },

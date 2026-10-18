@@ -69,16 +69,23 @@ class _AnyScreenState extends State<AnyScreen> {
         final b = parseInt(budget.text) ?? 0;
         return Scaffold(
           body: ListView(padding: EdgeInsets.zero, children: [
-            Container(
-              decoration: const BoxDecoration(gradient: anyGradient, borderRadius: BorderRadius.vertical(bottom: Radius.circular(26))),
-              padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 20, 20, 24),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 36),
-                const SizedBox(height: 10),
-                Text('اشترِ لي أي شيء', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white)),
-                const SizedBox(height: 6),
-                const Text('اكتب ما تحتاجه ومن أين، فيشتريه الموصّل بماله ويوصله إليك. تدفع له ثمن المشتريات والتوصيل عند الاستلام.',
-                    style: TextStyle(color: Colors.white, height: 1.5)),
+            // رأس نيلي بنقش الزليج (خدمة «اشترِ لي» لها لونها الخاص)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+              child: Stack(children: [
+                const Positioned.fill(child: ColoredBox(color: ink)),
+                const Zellige(opacity: 0.1),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 20, 20, 26),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const StarBadge(size: 54, color: star, child: Icon(Icons.shopping_bag_rounded, color: ink, size: 26)),
+                    const SizedBox(height: 12),
+                    Text('اشترِ لي أي شيء', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontSize: 28)),
+                    const SizedBox(height: 6),
+                    const Text('اكتب ما تحتاجه ومن أين، فيشتريه الموصّل بماله ويوصله إليك. تدفع له ثمن المشتريات والتوصيل عند الاستلام.',
+                        style: TextStyle(color: Colors.white, height: 1.5)),
+                  ]),
+                ),
               ]),
             ),
             if (!app.anyOn)
@@ -135,11 +142,10 @@ class _AnyScreenState extends State<AnyScreen> {
                   if (err.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: Box(color: const Color(0xFFFCE9DC), child: Text(err, style: const TextStyle(color: Color(0xFF8A3414), fontWeight: FontWeight.w600))),
+                      child: Box(color: isDark(context) ? brand.withValues(alpha: 0.25) : brandSoft, child: Text(err, style: TextStyle(color: isDark(context) ? Colors.white : brandDark, fontWeight: FontWeight.w600))),
                     ),
                   const SizedBox(height: 16),
                   FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB84A0B)),
                     onPressed: busy ? null : _send,
                     child: busy
                         ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))

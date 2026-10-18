@@ -170,11 +170,11 @@ class _CartScreenState extends State<CartScreen> {
                 const SizedBox(height: 10),
                 if (ci.coupon != null)
                   Row(children: [
-                    const Icon(Icons.check_circle_rounded, color: brand, size: 20),
+                    Icon(Icons.check_circle_rounded, color: teaOf(context), size: 20),
                     const SizedBox(width: 6),
                     Expanded(
-                        child: Text('${app.couponLabel(ci.coupon!)} · ${ci.coupon!['code']}',
-                            style: const TextStyle(color: brand, fontWeight: FontWeight.w700))),
+                        child: Text('${app.couponLabel(ci.coupon!)}، الرمز ${ci.coupon!['code']}',
+                            style: TextStyle(color: teaOf(context), fontWeight: FontWeight.w700))),
                     TextButton(onPressed: () => app.setCoupon(''), child: const Text('إزالة')),
                   ])
                 else ...[
@@ -200,7 +200,7 @@ class _CartScreenState extends State<CartScreen> {
                   if (app.coupon.isNotEmpty && ci.couponErr.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
-                      child: Text(ci.couponErr, style: const TextStyle(color: Color(0xFF9A2A12), fontSize: 13)),
+                      child: Text(ci.couponErr, style: TextStyle(color: accentOf(context), fontSize: 13)),
                     ),
                   if (offers.isNotEmpty)
                     Padding(
@@ -208,7 +208,7 @@ class _CartScreenState extends State<CartScreen> {
                       child: Wrap(spacing: 8, children: [
                         for (final c in offers)
                           ActionChip(
-                            avatar: const Icon(Icons.local_offer_rounded, size: 16, color: orange),
+                            avatar: const Icon(Icons.local_offer_rounded, size: 16, color: star),
                             label: Text('${c['code']}'),
                             onPressed: () => app.setCoupon('${c['code']}'),
                           ),
@@ -220,7 +220,7 @@ class _CartScreenState extends State<CartScreen> {
             const SizedBox(height: 12),
             const Box(
               child: Row(children: [
-                Icon(Icons.payments_rounded, color: brand),
+                Icon(Icons.payments_rounded, color: tea),
                 SizedBox(width: 10),
                 Expanded(child: Text('الدفع نقداً للموصّل عند الاستلام', style: TextStyle(fontWeight: FontWeight.w600))),
               ]),
@@ -229,7 +229,7 @@ class _CartScreenState extends State<CartScreen> {
             Box(
               child: Column(children: [
                 Line('المنتجات', money(ci.subtotal)),
-                if (ci.discount > 0) Line('خصم الكوبون', '−${money(ci.discount)}', color: brand),
+                if (ci.discount > 0) Line('خصم الكوبون', '−${money(ci.discount)}', color: teaOf(context)),
                 Line('التوصيل${ci.zone != null ? ' إلى ${ci.zone!['name']}' : ''}', money(ci.fee)),
                 const Divider(),
                 Line('المجموع', money(ci.total), bold: true),
@@ -238,14 +238,14 @@ class _CartScreenState extends State<CartScreen> {
             if (err.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
-                child: Box(color: const Color(0xFFFCE9DC), child: Text(err, style: const TextStyle(color: Color(0xFF8A3414), fontWeight: FontWeight.w600))),
+                child: Box(color: isDark(context) ? brand.withValues(alpha: 0.25) : brandSoft, child: Text(err, style: TextStyle(color: isDark(context) ? Colors.white : brandDark, fontWeight: FontWeight.w600))),
               ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: busy || !open ? null : _place,
               child: busy
                   ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                  : Text(open ? 'تأكيد الطلب · ${money(ci.total)}' : 'المحل مغلق الآن'),
+                  : Text(open ? 'تأكيد الطلب بـ ${money(ci.total)}' : 'المحل مغلق الآن'),
             ),
           ]),
         );

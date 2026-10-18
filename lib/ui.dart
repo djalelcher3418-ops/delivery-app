@@ -2,26 +2,30 @@ import 'package:flutter/material.dart';
 
 import 'store.dart';
 
-// ألوان التصميم الجديد: أخضر نعناعي + أبيض + أسود
-const brand = Color(0xFF4E9F82);
-const brandDark = Color(0xFF2E7A5F);
-const mint = Color(0xFFDCEFE7); // دوائر خلف الصور
-const mintSoft = Color(0xFFEEF7F3); // خلفيات خفيفة
-const ink = Color(0xFF161817); // الأزرار السوداء
-const orange = Color(0xFFE8890C);
-const star = Color(0xFFF2A516);
-const info = Color(0xFF1D4E89);
+// ألوان «سوق الحي»: هريسة للأفعال، نعناع الشاي للحالات المطمئنة، نيلي للنص، زعفران للعروض
+const brand = Color(0xFFC2410C); // الهريسة: الأزرار والإجراءات
+const brandDark = Color(0xFF9A3412);
+const brandSoft = Color(0xFFFBE3D6);
+const tea = Color(0xFF0F7B5F); // نعناع الشاي: مفتوح، تم التوصيل
+const teaDark = Color(0xFF0A5A43);
+const teaSoft = Color(0xFFE1F1EA);
+const ink = Color(0xFF1E2A4A); // النيلي: النصوص والأزرار الثانوية
+const inkSoft = Color(0xFFE5E9F3);
+const star = Color(0xFFF2A516); // الزعفران: العروض والتقييم (نصه نيلي دائماً)
+const saffronSoft = Color(0xFFFDF0D5);
+const saffronText = Color(0xFF7A4A12);
+const paper = Color(0xFFF6F7F9); // أرضية الصفحات
+const muted = Color(0xFF5B6474);
+const hairline = Color(0xFFDDE1E8);
+const danger = Color(0xFF9A2A12);
 
-const heroGradient = LinearGradient(
-  begin: Alignment.topRight,
-  end: Alignment.bottomLeft,
-  colors: [Color(0xFF66B496), Color(0xFF4E9F82), Color(0xFF3A8A6D)],
-);
-const anyGradient = LinearGradient(
-  begin: Alignment.topRight,
-  end: Alignment.bottomLeft,
-  colors: [Color(0xFFD9770A), Color(0xFFB45F06)],
-);
+bool isDark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
+
+/// لون النصوص المميزة: الهريسة في الوضع الفاتح، وأفتح منها في الداكن حتى تبقى مقروءة
+Color accentOf(BuildContext context) => Theme.of(context).colorScheme.primary;
+
+/// نعناع الشاي للنصوص (أفتح في الوضع الداكن)
+Color teaOf(BuildContext context) => isDark(context) ? const Color(0xFF5CC9A7) : teaDark;
 
 class Cat {
   final String id, label;
@@ -31,22 +35,105 @@ class Cat {
 }
 
 const cats = <Cat>[
-  Cat('food', 'مطاعم', Icons.restaurant_rounded, Color(0xFFFCE9DC), Color(0xFF8A3414)),
-  Cat('bread', 'مخابز وحلويات', Icons.bakery_dining_rounded, Color(0xFFF6EED8), Color(0xFF6E500F)),
-  Cat('veg', 'خضر وفواكه', Icons.eco_rounded, Color(0xFFE2F1EA), Color(0xFF0A5A41)),
-  Cat('grocery', 'مواد غذائية', Icons.local_grocery_store_rounded, Color(0xFFE3ECF7), Color(0xFF1D4E89)),
+  Cat('food', 'مطاعم', Icons.restaurant_rounded, brandSoft, brandDark),
+  Cat('bread', 'مخابز وحلويات', Icons.bakery_dining_rounded, Color(0xFFF6EBDD), saffronText),
+  Cat('veg', 'خضر وفواكه', Icons.eco_rounded, teaSoft, teaDark),
+  Cat('grocery', 'مواد غذائية', Icons.local_grocery_store_rounded, inkSoft, ink),
   Cat('meat', 'لحوم ودجاج', Icons.kebab_dining_rounded, Color(0xFFFBE4E4), Color(0xFF8E1F1F)),
-  Cat('pharma', 'شبه صيدلية', Icons.local_pharmacy_rounded, Color(0xFFE1F3F4), Color(0xFF0E6168)),
-  Cat('other', 'محلات أخرى', Icons.storefront_rounded, Color(0xFFFFF1DC), Color(0xFF8A4B00)),
+  Cat('pharma', 'شبه صيدلية', Icons.local_pharmacy_rounded, Color(0xFFE0F0F1), Color(0xFF0E6168)),
+  Cat('other', 'محلات أخرى', Icons.storefront_rounded, saffronSoft, saffronText),
 ];
+
+/// «دقيقة» أو «دقائق» حسب العدد (3 إلى 10 دقائق، وغيرها دقيقة)
+String minutesWord(int n) => (n % 100 >= 3 && n % 100 <= 10) ? 'دقائق' : 'دقيقة';
 
 String firstChar(String s) => s.trim().isEmpty ? '?' : s.trim().characters.first;
 
 Cat catOf(String? id) => cats.firstWhere((c) => c.id == id, orElse: () => cats.last);
 
-List<BoxShadow> softShadow(BuildContext context) => Theme.of(context).brightness == Brightness.dark
-    ? const []
-    : [BoxShadow(color: const Color(0xFF1E4D3C).withValues(alpha: 0.08), blurRadius: 22, offset: const Offset(0, 8))];
+/// خط رفيع تحت البطاقات بدل الظلال الثقيلة
+List<BoxShadow> softShadow(BuildContext context) =>
+    isDark(context) ? const [] : const [BoxShadow(color: Color(0xFFE3E7ED), offset: Offset(0, 1))];
+
+/// نقش الزليج: مربعان متقاطعان ونقطة في كل خلية (يُرسم فوق لون الهريسة)
+class ZelligePainter extends CustomPainter {
+  final Color color;
+  const ZelligePainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const cell = 46.0, half = 12.0;
+    final line = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+    final dot = Paint()..color = color;
+    for (double y = 0; y < size.height + cell; y += cell) {
+      for (double x = 0; x < size.width + cell; x += cell) {
+        final c = Offset(x + cell / 2, y + cell / 2);
+        canvas.drawRect(Rect.fromCenter(center: c, width: half * 2, height: half * 2), line);
+        canvas.save();
+        canvas.translate(c.dx, c.dy);
+        canvas.rotate(0.785398);
+        canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: half * 2, height: half * 2), line);
+        canvas.restore();
+        canvas.drawCircle(c, 3, dot);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(ZelligePainter old) => old.color != color;
+}
+
+/// طبقة النقش تملأ ما تحتها ولا تلتقط اللمس
+class Zellige extends StatelessWidget {
+  final double opacity;
+  const Zellige({super.key, this.opacity = 0.13});
+
+  @override
+  Widget build(BuildContext context) => Positioned.fill(
+        child: IgnorePointer(
+          child: ClipRect(child: CustomPaint(painter: ZelligePainter(Colors.white.withValues(alpha: opacity)))),
+        ),
+      );
+}
+
+/// نجمة الزليج الثمانية (شكل شارات الأقسام)
+class StarClipper extends CustomClipper<Path> {
+  const StarClipper();
+  static const _pts = [
+    [0.5, 0.0], [0.343, 0.121], [0.146, 0.146], [0.121, 0.343], //
+    [0.0, 0.5], [0.121, 0.657], [0.146, 0.854], [0.343, 0.879],
+    [0.5, 1.0], [0.657, 0.879], [0.854, 0.854], [0.879, 0.657],
+    [1.0, 0.5], [0.879, 0.343], [0.854, 0.146], [0.657, 0.121],
+  ];
+
+  @override
+  Path getClip(Size s) {
+    final p = Path()..moveTo(_pts[0][0] * s.width, _pts[0][1] * s.height);
+    for (final q in _pts.skip(1)) {
+      p.lineTo(q[0] * s.width, q[1] * s.height);
+    }
+    return p..close();
+  }
+
+  @override
+  bool shouldReclip(StarClipper old) => false;
+}
+
+class StarBadge extends StatelessWidget {
+  final double size;
+  final Color color;
+  final Widget child;
+  const StarBadge({super.key, this.size = 58, required this.color, required this.child});
+
+  @override
+  Widget build(BuildContext context) => ClipPath(
+        clipper: const StarClipper(),
+        child: Container(width: size, height: size, color: color, alignment: Alignment.center, child: child),
+      );
+}
 
 class Box extends StatelessWidget {
   final Widget child;
@@ -62,16 +149,16 @@ class Box extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: color ?? Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         border: border,
-        boxShadow: softShadow(context),
+        boxShadow: color == null ? softShadow(context) : null,
       ),
       child: child,
     );
     if (onTap == null) return c;
     return Material(
       color: Colors.transparent,
-      child: InkWell(borderRadius: BorderRadius.circular(22), onTap: onTap, child: c),
+      child: InkWell(borderRadius: BorderRadius.circular(20), onTap: onTap, child: c),
     );
   }
 }
@@ -80,40 +167,80 @@ class Pill extends StatelessWidget {
   final String text;
   final Color bg, fg;
   final IconData? icon;
-  const Pill(this.text, {super.key, this.bg = const Color(0xFFEAF4EF), this.fg = const Color(0xFF3F5A4F), this.icon});
+  const Pill(this.text, {super.key, this.bg = const Color(0xFFF1F3F6), this.fg = ink, this.icon});
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final dark = isDark(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(color: dark ? fg.withValues(alpha: 0.22) : bg, borderRadius: BorderRadius.circular(20)),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: dark ? fg.withValues(alpha: 0.28) : bg, borderRadius: BorderRadius.circular(10)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (icon != null) ...[Icon(icon, size: 14, color: dark ? Colors.white70 : fg), const SizedBox(width: 4)],
-        Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: dark ? Colors.white : fg)),
+        Flexible(
+          child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: dark ? Colors.white : fg)),
+        ),
       ]),
     );
   }
 }
 
-Pill statusPill(Doc o) {
+/// شارة «مفتوح» بنقطة خضراء
+class OpenPill extends StatelessWidget {
+  final String text;
+  const OpenPill({super.key, this.text = 'مفتوح الآن'});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(color: isDark(context) ? tea.withValues(alpha: 0.3) : teaSoft, borderRadius: BorderRadius.circular(10)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 8, height: 8, decoration: const BoxDecoration(color: tea, shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+          Text(text, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: teaOf(context))),
+        ]),
+      );
+}
+
+Widget statusPill(Doc o) {
   switch (o['status']) {
     case 'new':
-      return const Pill('جديد', bg: Color(0xFFFCE9DC), fg: Color(0xFF8A3414));
+      return const Pill('جديد', bg: inkSoft, fg: ink);
     case 'prep':
       return isAny(o)
-          ? Pill(o['courierUid'] != null ? 'يشتري' : 'نبحث', bg: const Color(0xFFFFF1DC), fg: const Color(0xFF8A4B00))
-          : const Pill('قيد التحضير', bg: Color(0xFFF6EED8), fg: Color(0xFF6E500F));
+          ? Pill(o['courierUid'] != null ? 'يشتري' : 'نبحث', bg: saffronSoft, fg: saffronText)
+          : const Pill('قيد التحضير', bg: saffronSoft, fg: saffronText);
     case 'ready':
-      return const Pill('جاهز', bg: Color(0xFFE3ECF7), fg: info);
+      return const Pill('جاهز', bg: brandSoft, fg: brandDark);
     case 'road':
-      return const Pill('في الطريق', bg: Color(0xFFE3ECF7), fg: info);
+      return const Pill('في الطريق', bg: brandSoft, fg: brandDark);
     case 'done':
-      return const Pill('تم التوصيل', bg: Color(0xFFE2F1EA), fg: Color(0xFF0A5A41));
+      return const OpenPill(text: 'تم التوصيل');
     case 'rejected':
       return const Pill('مرفوض');
     default:
       return const Pill('ملغى');
+  }
+}
+
+/// معلومة صغيرة: أيقونة ونص (بدل النقاط الفاصلة)
+class Meta extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color? color;
+  const Meta(this.icon, this.text, {super.key, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? Theme.of(context).hintColor;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 15, color: c),
+      const SizedBox(width: 4),
+      Text(text, style: TextStyle(fontSize: 13, color: c)),
+    ]);
   }
 }
 
@@ -126,13 +253,13 @@ class RatingChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final a = avgRating(x);
     if (a == null) {
-      return showNew ? Text('جديد', style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor)) : const SizedBox.shrink();
+      return showNew ? Text('جديد', style: TextStyle(fontSize: 12.5, color: Theme.of(context).hintColor)) : const SizedBox.shrink();
     }
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.star_rounded, size: 17, color: star),
+      const Icon(Icons.star_rounded, size: 18, color: star),
       const SizedBox(width: 2),
-      Text(a.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-      Text(' (${asInt(x['ratingCount'])})', style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor)),
+      Text(a.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+      Text(' (${asInt(x['ratingCount'])})', style: TextStyle(fontSize: 12.5, color: Theme.of(context).hintColor)),
     ]);
   }
 }
@@ -144,9 +271,9 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
-        child: Row(children: [
-          Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 18))),
+        padding: const EdgeInsets.fromLTRB(20, 22, 20, 10),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+          Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 19))),
           if (trailing != null) Text(trailing!, style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor)),
         ]),
       );
@@ -162,13 +289,13 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          CircleAvatar(
-            radius: 34,
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: Icon(icon, size: 32, color: Theme.of(context).hintColor),
+          StarBadge(
+            size: 72,
+            color: isDark(context) ? brand.withValues(alpha: 0.3) : brandSoft,
+            child: Icon(icon, size: 30, color: isDark(context) ? Colors.white : brandDark),
           ),
-          const SizedBox(height: 12),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16), textAlign: TextAlign.center),
+          const SizedBox(height: 14),
+          Text(title, style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
           if (text.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(text, style: TextStyle(color: Theme.of(context).hintColor), textAlign: TextAlign.center),
@@ -178,6 +305,39 @@ class EmptyState extends StatelessWidget {
       );
 }
 
+/// زر مربع صغير بزوايا مدوّرة (الإنقاص رمادي، والزيادة بلون الهريسة)
+class _StepBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool primary;
+  final VoidCallback? onTap;
+  const _StepBtn(this.icon, this.label, this.primary, this.onTap);
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = isDark(context);
+    final bg = primary ? brand : (dark ? Colors.white12 : const Color(0xFFF1F3F6));
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: label,
+      child: Material(
+        color: onTap == null ? bg.withValues(alpha: 0.4) : bg,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: SizedBox(
+            width: 38,
+            height: 44,
+            child: Icon(icon, size: 20, color: primary ? Colors.white : (dark ? Colors.white : ink)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class QtyStepper extends StatelessWidget {
   final int qty;
   final VoidCallback onAdd, onSub;
@@ -185,22 +345,18 @@ class QtyStepper extends StatelessWidget {
   const QtyStepper({super.key, required this.qty, required this.onAdd, required this.onSub, this.enabled = true});
 
   @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final fg = dark ? const Color(0xFF86D9B6) : const Color(0xFF0A5A41);
-    return Container(
-      decoration: BoxDecoration(color: dark ? const Color(0xFF16352A) : mint, borderRadius: BorderRadius.circular(30)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        IconButton(onPressed: enabled ? onAdd : null, icon: Icon(Icons.add_rounded, color: fg), tooltip: 'زيادة'),
-        Text('$qty', style: TextStyle(fontWeight: FontWeight.w700, color: fg, fontSize: 16)),
-        IconButton(onPressed: onSub, icon: Icon(Icons.remove_rounded, color: fg), tooltip: 'إنقاص'),
-      ]),
-    );
-  }
+  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
+        _StepBtn(Icons.remove_rounded, 'إنقاص', false, onSub),
+        SizedBox(
+          width: 30,
+          child: Text('$qty', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        ),
+        _StepBtn(Icons.add_rounded, 'زيادة', true, enabled ? onAdd : null),
+      ]);
 }
 
-/// صورة المنتج داخل دائرة نعناعية مثل التصميم.
-/// الصورة المقصوصة الخلفية (cut) تظهر كاملة فوق الدائرة، والعادية تُقصّ دائرياً.
+/// صورة المنتج في مربع بزوايا مدوّرة على لون القسم.
+/// الصورة المقصوصة الخلفية (cut) تظهر كاملة فوق اللون، والعادية تملأ المربع.
 class ItemThumb extends StatelessWidget {
   final Doc product;
   final String cat;
@@ -211,37 +367,25 @@ class ItemThumb extends StatelessWidget {
   Widget build(BuildContext context) {
     final img = app.productImage(product);
     final c = catOf(cat);
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final cut = product['cut'] == true;
-    final circle = dark ? const Color(0xFF1F3A30) : mint;
+    final dark = isDark(context);
+    final bg = dark ? c.fg.withValues(alpha: 0.3) : c.bg;
+    final r = BorderRadius.circular(size * 0.22);
+    Widget inner;
     if (img == null) {
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(color: dark ? c.fg.withValues(alpha: 0.3) : c.bg, shape: BoxShape.circle),
-        alignment: Alignment.center,
-        child: Text(firstChar('${product['name'] ?? ''}'),
-            style: TextStyle(fontSize: size * 0.34, fontWeight: FontWeight.w700, color: dark ? Colors.white : c.fg)),
-      );
+      inner = Text(firstChar('${product['name'] ?? ''}'),
+          style: TextStyle(
+              fontFamily: Theme.of(context).textTheme.titleLarge?.fontFamily,
+              fontSize: size * 0.36,
+              fontWeight: FontWeight.w800,
+              color: dark ? Colors.white : c.fg));
+    } else if (product['cut'] == true) {
+      inner = Padding(padding: EdgeInsets.all(size * 0.06), child: Image.memory(img, fit: BoxFit.contain, gaplessPlayback: true));
+    } else {
+      inner = Image.memory(img, fit: BoxFit.cover, width: size, height: size, gaplessPlayback: true);
     }
-    if (!cut) {
-      return Container(
-        width: size,
-        height: size,
-        padding: EdgeInsets.all(size * 0.04),
-        decoration: BoxDecoration(color: circle, shape: BoxShape.circle),
-        child: ClipOval(child: Image.memory(img, fit: BoxFit.cover, gaplessPlayback: true)),
-      );
-    }
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
-        Container(width: size * 0.86, height: size * 0.86, decoration: BoxDecoration(color: circle, shape: BoxShape.circle)),
-        Positioned.fill(
-          child: Image.memory(img, fit: BoxFit.contain, gaplessPlayback: true),
-        ),
-      ]),
+    return ClipRRect(
+      borderRadius: r,
+      child: Container(width: size, height: size, color: bg, alignment: Alignment.center, child: inner),
     );
   }
 }
@@ -254,15 +398,40 @@ class Line extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final st = TextStyle(fontWeight: bold ? FontWeight.w700 : FontWeight.w500, fontSize: bold ? 16 : 14, color: color);
+    final st = TextStyle(fontWeight: bold ? FontWeight.w700 : FontWeight.w500, fontSize: bold ? 15 : 14, color: color);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(children: [
+      child: Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
         Expanded(child: Text(label, style: bold ? st : st.copyWith(color: color ?? Theme.of(context).hintColor))),
-        Text(value, style: st),
+        Text(value,
+            style: bold
+                ? Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 21, fontWeight: FontWeight.w800, color: color)
+                : st),
       ]),
     );
   }
+}
+
+/// زر مربع أبيض (رجوع، مفضلة) يطفو فوق الصور والخرائط
+class FloatBtn extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  final Color? color;
+  const FloatBtn({super.key, required this.icon, required this.tooltip, required this.onTap, this.color});
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        tooltip: tooltip,
+        onPressed: onTap,
+        icon: Icon(icon, size: 22),
+        style: IconButton.styleFrom(
+          fixedSize: const Size(44, 44),
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          foregroundColor: color ?? Theme.of(context).colorScheme.onSurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      );
 }
 
 class ShopCard extends StatelessWidget {
@@ -281,13 +450,13 @@ class ShopCard extends StatelessWidget {
     final fav = app.favs.contains(shop['id']);
     final zone = app.currentZone;
     final prep = asInt(shop['prepMin']) > 0 ? asInt(shop['prepMin']) : 15;
-    final hint = Theme.of(context).hintColor;
     final dist = mini ? null : app.distanceTo(shop);
+    final dark = isDark(context);
     return Container(
       width: mini ? 220 : null,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: softShadow(context),
       ),
       clipBehavior: Clip.antiAlias,
@@ -296,90 +465,82 @@ class ShopCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: SizedBox(
-                  height: mini ? 96 : 140,
-                  child: Stack(fit: StackFit.expand, children: [
-                    if (cover != null)
-                      Image.memory(cover, fit: BoxFit.cover, gaplessPlayback: true)
-                    else
-                      Container(color: mintSoft, child: Icon(c.icon, size: mini ? 44 : 58, color: brand)),
-                    if (!open)
-                      Container(
-                        color: Colors.black.withValues(alpha: 0.55),
-                        alignment: Alignment.center,
-                        child: Text(app.closedLabel(shop), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-                      ),
-                    if (offers.isNotEmpty)
-                      PositionedDirectional(
-                        bottom: 10,
-                        start: 10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: orange, borderRadius: BorderRadius.circular(20)),
-                          child: Text(app.couponLabel(offers.first),
-                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
-                        ),
-                      ),
-                    PositionedDirectional(
-                      top: 8,
-                      end: 8,
-                      child: Material(
-                        color: Colors.white.withValues(alpha: 0.95),
-                        shape: const CircleBorder(),
-                        child: IconButton(
-                          visualDensity: VisualDensity.compact,
-                          tooltip: fav ? 'إزالة من المفضلة' : 'أضف إلى المفضلة',
-                          onPressed: () => app.toggleFav(shop['id']),
-                          icon: Icon(fav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                              color: fav ? const Color(0xFFE5484D) : const Color(0xFF56625C)),
-                        ),
-                      ),
+            SizedBox(
+              height: mini ? 96 : 128,
+              child: Stack(fit: StackFit.expand, children: [
+                if (cover != null)
+                  Image.memory(cover, fit: BoxFit.cover, gaplessPlayback: true)
+                else
+                  Container(
+                    color: dark ? c.fg.withValues(alpha: 0.3) : c.bg,
+                    child: Icon(c.icon, size: mini ? 42 : 54, color: dark ? Colors.white70 : c.fg),
+                  ),
+                if (!open)
+                  Container(
+                    color: ink.withValues(alpha: 0.62),
+                    alignment: Alignment.center,
+                    child: Text(app.closedLabel(shop), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                  ),
+                if (open && !mini)
+                  PositionedDirectional(
+                    top: 10,
+                    start: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Container(width: 8, height: 8, decoration: const BoxDecoration(color: tea, shape: BoxShape.circle)),
+                        const SizedBox(width: 6),
+                        const Text('مفتوح', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: teaDark)),
+                      ]),
                     ),
-                  ]),
+                  ),
+                if (offers.isNotEmpty)
+                  PositionedDirectional(
+                    bottom: 10,
+                    start: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: star, borderRadius: BorderRadius.circular(10)),
+                      child: Text(app.couponLabel(offers.first), style: const TextStyle(color: ink, fontSize: 12, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                PositionedDirectional(
+                  top: 4,
+                  end: 4,
+                  child: IconButton(
+                    tooltip: fav ? 'إزالة من المفضلة' : 'أضف إلى المفضلة',
+                    onPressed: () => app.toggleFav(shop['id']),
+                    style: IconButton.styleFrom(backgroundColor: Colors.white, fixedSize: const Size(40, 40)),
+                    icon: Icon(fav ? Icons.favorite_rounded : Icons.favorite_border_rounded, size: 21, color: fav ? brand : muted),
+                  ),
                 ),
-              ),
+              ]),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   Expanded(
-                      child: Text('${shop['name']}',
-                          maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
+                    child: Text('${shop['name']}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: mini ? 16 : 18.5, fontWeight: FontWeight.w700)),
+                  ),
                   RatingChip(shop),
                 ]),
                 const SizedBox(height: 4),
-                Wrap(spacing: 10, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
-                    decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1F3A30) : mintSoft,
-                        borderRadius: BorderRadius.circular(20)),
-                    child: Text(c.label, style: const TextStyle(fontSize: 12, color: brand, fontWeight: FontWeight.w600)),
-                  ),
-                  if (!mini)
-                    Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.schedule_rounded, size: 14, color: hint),
-                      const SizedBox(width: 3),
-                      Text('${prep + 10}–${prep + 25} د', style: TextStyle(fontSize: 12.5, color: hint)),
-                    ]),
-                  if (zone != null) Text('التوصيل ${money(asInt(zone['fee']))}', style: TextStyle(fontSize: 12.5, color: hint)),
-                  if (!mini && dist != null)
-                    Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.near_me_rounded, size: 14, color: hint),
-                      const SizedBox(width: 3),
-                      Text(kmText(dist), style: TextStyle(fontSize: 12.5, color: hint)),
-                    ]),
+                Wrap(spacing: 14, runSpacing: 4, children: [
+                  if (mini) Text(c.label, style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor)),
+                  if (!mini) Meta(Icons.schedule_rounded, '${prep + 10}–${prep + 25} د'),
+                  if (zone != null) Meta(Icons.delivery_dining_rounded, money(asInt(zone['fee']))),
+                  if (dist != null) Meta(Icons.place_outlined, kmText(dist)),
                 ]),
                 if (hits.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: 6),
                     child: Text('فيه: ${hits.take(3).map((p) => p['name']).join('، ')}',
-                        style: const TextStyle(fontSize: 12.5, color: brand, fontWeight: FontWeight.w600)),
+                        style: TextStyle(fontSize: 13, color: accentOf(context), fontWeight: FontWeight.w600)),
                   ),
               ]),
             ),
@@ -390,51 +551,46 @@ class ShopCard extends StatelessWidget {
   }
 }
 
-/// الخطوط الملوّنة لمراحل الطلب
+/// مراحل الطلب كشرائط أفقية: المنجز بالأخضر، الحالي بالهريسة، والقادم رمادي
 class Steps extends StatelessWidget {
-  final List<List<String>> steps;
+  final List<String> labels;
   final int index;
   final bool finished;
-  const Steps({super.key, required this.steps, required this.index, required this.finished});
+  const Steps({super.key, required this.labels, required this.index, required this.finished});
 
   @override
   Widget build(BuildContext context) {
     final hint = Theme.of(context).hintColor;
-    final primary = Theme.of(context).colorScheme.primary;
-    return Box(
-      child: Column(children: [
-        for (int i = 0; i < steps.length; i++)
-          IntrinsicHeight(
-            child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              SizedBox(
-                width: 30,
-                child: Column(children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: (i < index || (i == index && finished)) ? primary : Colors.transparent,
-                      border: Border.all(color: i <= index ? primary : Theme.of(context).dividerColor, width: i == index && !finished ? 7 : 2),
-                    ),
-                    child: (i < index || (i == index && finished)) ? const Icon(Icons.check_rounded, size: 16, color: Colors.white) : null,
-                  ),
-                  if (i < steps.length - 1)
-                    Expanded(child: Container(width: 2, margin: const EdgeInsets.symmetric(vertical: 2), color: i < index ? primary : Theme.of(context).dividerColor)),
-                ]),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(steps[i][0], style: TextStyle(fontWeight: i == index ? FontWeight.w700 : FontWeight.w600, color: i <= index ? null : hint)),
-                    Text(steps[i][1], style: TextStyle(fontSize: 13, color: hint)),
-                  ]),
+    final accent = accentOf(context);
+    final off = isDark(context) ? Colors.white12 : const Color(0xFFE3E7ED);
+    return Semantics(
+      label: 'مراحل الطلب: ${labels[index.clamp(0, labels.length - 1)]}، المرحلة ${index + 1} من ${labels.length}',
+      excludeSemantics: true,
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (int i = 0; i < labels.length; i++) ...[
+          if (i > 0) const SizedBox(width: 6),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: 6,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  color: (i < index || (i == index && finished)) ? tea : (i == index ? accent : off),
                 ),
               ),
+              const SizedBox(height: 6),
+              Text(labels[i],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: i == index ? FontWeight.w700 : FontWeight.w600,
+                    color: (i < index || (i == index && finished)) ? teaOf(context) : (i == index ? accent : hint),
+                  )),
             ]),
           ),
+        ],
       ]),
     );
   }

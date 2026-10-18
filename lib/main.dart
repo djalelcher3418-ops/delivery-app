@@ -1,7 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'notify.dart';
 import 'screens/chat.dart';
@@ -62,59 +61,119 @@ void _openFromNotification(String payload) {
 
 ThemeData buildTheme(Brightness b) {
   final dark = b == Brightness.dark;
+  final surface = dark ? const Color(0xFF1A202B) : Colors.white;
+  final onSurface = dark ? const Color(0xFFEDEFF3) : ink;
   final scheme = ColorScheme.fromSeed(seedColor: brand, brightness: b).copyWith(
-    primary: dark ? const Color(0xFF6CC7A5) : brand,
-    secondary: orange,
-    surface: dark ? const Color(0xFF17201C) : Colors.white,
+    primary: dark ? const Color(0xFFF08A5D) : brand,
+    onPrimary: dark ? const Color(0xFF10141C) : Colors.white,
+    secondary: tea,
+    surface: surface,
+    onSurface: onSurface,
+    outlineVariant: dark ? Colors.white24 : hairline,
   );
-  final base = ThemeData(useMaterial3: true, colorScheme: scheme, brightness: b);
-  final text = base.textTheme.apply(fontFamily: GoogleFonts.getFont('IBM Plex Sans Arabic').fontFamily);
+  final base = ThemeData(useMaterial3: true, colorScheme: scheme, brightness: b, fontFamily: 'Plex');
+  // النصوص بخط IBM Plex Sans Arabic، والعناوين بخط Baloo Bhaijaan 2 (كلاهما مضمّن في assets/fonts)
+  final text = base.textTheme.apply(fontFamily: 'Plex', bodyColor: onSurface, displayColor: onSurface);
+  TextStyle head(TextStyle? t, FontWeight w) => (t ?? const TextStyle()).copyWith(fontFamily: 'Baloo', fontWeight: w, height: 1.25);
+  final shape14 = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
   return base.copyWith(
-    scaffoldBackgroundColor: dark ? const Color(0xFF0E1512) : const Color(0xFFF5FAF7),
+    scaffoldBackgroundColor: dark ? const Color(0xFF10141C) : paper,
+    hintColor: dark ? const Color(0xFFA3ABBA) : muted,
+    dividerColor: dark ? Colors.white12 : const Color(0xFFEEF0F4),
     textTheme: text.copyWith(
-      headlineSmall: GoogleFonts.getFont('Readex Pro', textStyle: text.headlineSmall, fontWeight: FontWeight.w600),
-      titleLarge: GoogleFonts.getFont('Readex Pro', textStyle: text.titleLarge, fontWeight: FontWeight.w600),
-      titleMedium: GoogleFonts.getFont('Readex Pro', textStyle: text.titleMedium, fontWeight: FontWeight.w600),
+      headlineMedium: head(text.headlineMedium, FontWeight.w800),
+      headlineSmall: head(text.headlineSmall, FontWeight.w800),
+      titleLarge: head(text.titleLarge, FontWeight.w800),
+      titleMedium: head(text.titleMedium, FontWeight.w700),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: dark ? const Color(0xFF10141C) : paper,
+      foregroundColor: onSurface,
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: head(text.titleLarge, FontWeight.w700).copyWith(color: onSurface, fontSize: 21),
     ),
     cardTheme: base.cardTheme.copyWith(
       elevation: 0,
       margin: EdgeInsets.zero,
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      color: surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: scheme.surface,
+      fillColor: surface,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: scheme.outlineVariant)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: scheme.outlineVariant)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: scheme.outlineVariant)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: scheme.outlineVariant)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: scheme.primary, width: 1.6)),
     ),
-    // الأزرار الرئيسية سوداء بشكل كبسولة مثل زر «Get Started» في التصميم
+    // الزر الرئيسي بلون الهريسة في الوضعين (النص الأبيض عليه مقروء)
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: dark ? const Color(0xFF6CC7A5) : ink,
-        foregroundColor: dark ? const Color(0xFF0E1512) : Colors.white,
-        disabledBackgroundColor: dark ? Colors.white12 : const Color(0xFFD5DDD9),
+        backgroundColor: brand,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: dark ? Colors.white12 : const Color(0xFFE3E7ED),
+        disabledForegroundColor: dark ? Colors.white38 : muted,
         minimumSize: const Size.fromHeight(54),
-        shape: const StadiumBorder(),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+        shape: shape14,
+        textStyle: const TextStyle(fontFamily: 'Plex', fontWeight: FontWeight.w700, fontSize: 16),
       ),
-    ),
-    chipTheme: base.chipTheme.copyWith(
-      shape: const StadiumBorder(),
-      side: BorderSide(color: dark ? Colors.white24 : const Color(0xFFDCE7E2)),
-      selectedColor: brand.withValues(alpha: dark ? 0.35 : 0.16),
-    ),
-    bottomSheetTheme: const BottomSheetThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(0, 48),
-        shape: const StadiumBorder(),
+        foregroundColor: onSurface,
+        textStyle: const TextStyle(fontFamily: 'Plex', fontWeight: FontWeight.w600, fontSize: 15),
+        side: BorderSide(color: scheme.outlineVariant),
+        shape: shape14,
       ),
     ),
-    snackBarTheme: SnackBarThemeData(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: scheme.primary,
+        shape: shape14,
+        textStyle: const TextStyle(fontFamily: 'Plex', fontWeight: FontWeight.w600, fontSize: 15),
+      ),
+    ),
+    iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(minimumSize: const Size(44, 44))),
+    // الشرائح: مستطيلات بزوايا 12، والمختارة نيلية
+    chipTheme: base.chipTheme.copyWith(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      side: WidgetStateBorderSide.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? BorderSide.none : BorderSide(color: scheme.outlineVariant)),
+      color: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? (dark ? const Color(0xFFEDEFF3) : ink) : surface),
+      labelStyle: TextStyle(
+        fontFamily: 'Plex',
+        fontWeight: FontWeight.w600,
+        color: WidgetStateColor.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? (dark ? const Color(0xFF10141C) : Colors.white) : onSurface),
+      ),
+      checkmarkColor: dark ? const Color(0xFF10141C) : Colors.white,
+    ),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(
+        selectedBackgroundColor: dark ? const Color(0xFFEDEFF3) : ink,
+        selectedForegroundColor: dark ? ink : Colors.white,
+        foregroundColor: onSurface,
+        side: BorderSide(color: scheme.outlineVariant),
+        shape: shape14,
+        textStyle: const TextStyle(fontFamily: 'Plex', fontWeight: FontWeight.w600, fontSize: 14.5),
+      ),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+    ),
+    dialogTheme: base.dialogTheme.copyWith(
+      backgroundColor: surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    ),
+    badgeTheme: const BadgeThemeData(backgroundColor: tea, textColor: Colors.white),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: scheme.primary),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: dark ? const Color(0xFFEDEFF3) : ink,
+      contentTextStyle: TextStyle(color: dark ? ink : Colors.white, fontFamily: 'Plex'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
   );
 }
 
