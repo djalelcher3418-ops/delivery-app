@@ -38,7 +38,7 @@ class OrdersScreen extends StatelessWidget {
       app.addLine(app.product(l.pid)!, l);
     }
     if (miss.isNotEmpty) app.toast('غير متوفر الآن: ${miss.join('، ')}');
-    tab.value = 3;
+    tab.value = 4;
   }
 
   @override

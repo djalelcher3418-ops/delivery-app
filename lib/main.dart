@@ -2,8 +2,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'market.dart';
 import 'notify.dart';
 import 'screens/chat.dart';
+import 'screens/messages.dart';
 import 'screens/shell.dart';
 import 'screens/stories.dart';
 import 'screens/track.dart';
@@ -50,6 +52,11 @@ void _openFromNotification(String payload) {
   if (nav == null || i < 0 || app.user == null) return;
   final kind = payload.substring(0, i), id = payload.substring(i + 1);
   nav.popUntil((r) => r.isFirst);
+  if (kind == 'mchat') {
+    final c = market.chat(id);
+    if (c != null) nav.push(MaterialPageRoute(builder: (_) => ListingChatScreen(listingId: '${c['listingId']}', buyerUid: '${c['buyerUid']}')));
+    return;
+  }
   if (kind == 'story') {
     final s = app.shop(id);
     if (s != null) nav.push(MaterialPageRoute(builder: (_) => StoryViewer(shopIds: [id])));

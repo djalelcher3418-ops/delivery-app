@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../store.dart';
 import '../ui.dart';
+import 'any.dart';
 import 'shell.dart';
 import 'shop.dart';
 import 'stories.dart';
@@ -63,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     if (app.anyOn) {
       out.add(_builtSlide(ink, Colors.white, 'اشترِ لي أي شيء', 'من أي محل في المدينة، حتى لو لم يكن في التطبيق', 'اطلب الآن',
-          Icons.shopping_bag_rounded, () => tab.value = 1));
+          Icons.shopping_bag_rounded, () => openAny(context)));
     }
     final offers = app.liveCoupons;
     if (offers.isNotEmpty) {
@@ -175,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       IconButton(
                         tooltip: 'السلة',
                         color: Colors.white,
-                        onPressed: () => tab.value = 3,
+                        onPressed: () => tab.value = 4,
                         icon: Badge(
                           isLabelVisible: app.cartCount > 0,
                           label: Text('${app.cartCount}'),
@@ -256,6 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   children: [
+                    if (app.anyOn) _anyBtn(),
                     _catBtn('all', 'الكل', Icons.apps_rounded, inkSoft, ink),
                     for (final c in catList) _catBtn(c.id, c.label, c.icon, c.bg, c.fg),
                     if (app.favs.isNotEmpty) _catBtn('fav', 'المفضلة', Icons.favorite_rounded, brandSoft, brandDark),
@@ -272,6 +274,25 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
+
+  /// «اشترِ لي أي شيء» أول الشارات، بلون الزعفران
+  Widget _anyBtn() => Semantics(
+        button: true,
+        label: 'اشترِ لي أي شيء',
+        excludeSemantics: true,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => openAny(context),
+          child: const SizedBox(
+            width: 74,
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              StarBadge(color: star, child: Icon(Icons.shopping_bag_rounded, size: 26, color: ink)),
+              SizedBox(height: 6),
+              Text('اشترِ لي', maxLines: 1, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+        ),
+      );
 
   /// شارة القسم: المختارة بلون الهريسة وأيقونتها بيضاء
   Widget _catBtn(String id, String label, IconData icon, Color bg, Color fg) {
@@ -410,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
             title: app.visibleShops.isEmpty ? 'لا توجد محلات بعد' : 'لا توجد نتائج',
             text: 'جرّب كلمة أخرى، أو اطلب من «اشترِ لي أي شيء».',
             action: OutlinedButton.icon(
-                onPressed: () => tab.value = 1, icon: const Icon(Icons.shopping_bag_outlined), label: const Text('اشترِ لي أي شيء')),
+                onPressed: () => openAny(context), icon: const Icon(Icons.shopping_bag_outlined), label: const Text('اشترِ لي أي شيء')),
           ),
         )
       else

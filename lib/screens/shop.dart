@@ -321,7 +321,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(18),
                     onTap: () {
-                      tab.value = 3;
+                      tab.value = 4;
                       Navigator.of(context).popUntil((r) => r.isFirst);
                     },
                     child: SizedBox(

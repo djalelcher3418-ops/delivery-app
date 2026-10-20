@@ -7,6 +7,8 @@ import 'shell.dart';
 import 'track.dart';
 
 /// «اشترِ لي أي شيء»: الموصّل يشتري من أي محل بماله ويوصله
+void openAny(BuildContext context) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnyScreen()));
+
 class AnyScreen extends StatefulWidget {
   const AnyScreen({super.key});
   @override
@@ -51,8 +53,10 @@ class _AnyScreenState extends State<AnyScreen> {
       text.clear();
       budget.clear();
       if (!mounted) return;
-      tab.value = 2;
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => TrackScreen(orderId: id)));
+      tab.value = 3;
+      final nav = Navigator.of(context);
+      nav.popUntil((r) => r.isFirst);
+      nav.push(MaterialPageRoute(builder: (_) => TrackScreen(orderId: id)));
     } catch (x) {
       setState(() => err = errText(x));
     }
@@ -78,7 +82,18 @@ class _AnyScreenState extends State<AnyScreen> {
                 Padding(
                   padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 20, 20, 26),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const StarBadge(size: 54, color: star, child: Icon(Icons.shopping_bag_rounded, color: ink, size: 26)),
+                    Row(children: [
+                      if (Navigator.of(context).canPop()) ...[
+                        IconButton(
+                          tooltip: 'رجوع',
+                          color: Colors.white,
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          icon: const Icon(Icons.arrow_back_rounded),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      const StarBadge(size: 54, color: star, child: Icon(Icons.shopping_bag_rounded, color: ink, size: 26)),
+                    ]),
                     const SizedBox(height: 12),
                     Text('اشترِ لي أي شيء', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontSize: 28)),
                     const SizedBox(height: 6),

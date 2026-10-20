@@ -10,6 +10,7 @@ import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'market.dart';
 import 'notify.dart';
 
 typedef Doc = Map<String, dynamic>;
@@ -288,6 +289,7 @@ class AppState extends ChangeNotifier {
       s.cancel();
     }
     _subs.clear();
+    market.stop();
     // تسجيل الخروج يوقف خدمة «نتابع طلبك» وإشعارها الثابت
     _keepAlive?.cancel();
     _keepAlive = null;
@@ -312,6 +314,7 @@ class AppState extends ChangeNotifier {
 
   void _start() {
     final uid = user!.uid;
+    market.start(uid);
     _subs.add(fs.collection('zones').snapshots().listen((s) {
       zones = _docs(s);
       notifyListeners();

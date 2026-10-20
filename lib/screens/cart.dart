@@ -68,7 +68,7 @@ class _CartScreenState extends State<CartScreen> {
       later = false;
       when = null;
       if (!mounted) return;
-      tab.value = 2;
+      tab.value = 3;
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => TrackScreen(orderId: id)));
     } catch (x) {
       setState(() => err = errText(x));

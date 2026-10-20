@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../store.dart';
 import '../ui.dart';
-import 'any.dart';
+import '../market.dart';
 import 'cart.dart';
 import 'home.dart';
+import 'market.dart';
+import 'messages.dart';
 import 'orders.dart';
 
 /// التبويب الحالي — تغيّره الشاشات الأخرى (مثلاً بعد إرسال الطلب)
@@ -18,17 +20,18 @@ class Shell extends StatelessWidget {
     return ValueListenableBuilder<int>(
       valueListenable: tab,
       builder: (context, i, _) => ListenableBuilder(
-        listenable: app,
+        listenable: Listenable.merge([app, market]),
         builder: (context, _) {
-          final cart = app.cartCount, active = app.activeOrders, unread = app.anyUnread;
+          final cart = app.cartCount, active = app.activeOrders, unread = app.anyUnread, msgs = market.unreadCount;
           return Scaffold(
-            body: IndexedStack(index: i, children: const [HomeScreen(), AnyScreen(), OrdersScreen(), CartScreen()]),
+            body: IndexedStack(index: i, children: const [HomeScreen(), MarketScreen(), ChatsScreen(), OrdersScreen(), CartScreen()]),
             bottomNavigationBar: BottomBar(
               index: i,
               onTap: (v) => tab.value = v,
               items: [
-                const BarItem(Icons.home_outlined, Icons.home_rounded, 'الرئيسية'),
-                const BarItem(Icons.shopping_bag_outlined, Icons.shopping_bag_rounded, 'اشترِ لي'),
+                const BarItem(Icons.storefront_outlined, Icons.storefront_rounded, 'المحلات'),
+                const BarItem(Icons.sell_outlined, Icons.sell_rounded, 'السوق'),
+                BarItem(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'الرسائل', badge: msgs > 0 ? '$msgs' : null),
                 BarItem(Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'طلباتي',
                     badge: unread ? '!' : (active > 0 ? '$active' : null)),
                 BarItem(Icons.shopping_cart_outlined, Icons.shopping_cart_rounded, 'السلة', badge: cart > 0 ? '$cart' : null),
