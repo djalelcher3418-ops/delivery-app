@@ -207,7 +207,7 @@ class DeliveryApp extends StatelessWidget {
       home: ListenableBuilder(
         listenable: app,
         builder: (context, _) {
-          if (!app.ready) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          if (!app.ready) return const SlowSpinner();
           return app.user == null ? const WelcomeScreen() : const Shell();
         },
       ),

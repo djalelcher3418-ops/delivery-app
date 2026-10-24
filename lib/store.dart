@@ -728,7 +728,7 @@ class AppState extends ChangeNotifier {
   }
 
   // ---------------- actions ----------------
-  Future<void> signInAnon() => auth.signInAnonymously();
+  Future<void> signInAnon() => auth.signInAnonymously().timeout(const Duration(seconds: 25));
   Future<void> signOut() async {
     cart.clear();
     cartShop = null;
@@ -1029,6 +1029,7 @@ class AppState extends ChangeNotifier {
 }
 
 String errText(Object e) {
+  if (e is TimeoutException) return 'انتهت مهلة الاتصال بالخادم. تحقق من الإنترنت (جرّب الواي فاي بدل بيانات الهاتف أو العكس، وأوقف أي VPN)، وتأكد أن تاريخ الهاتف وساعته صحيحان، ثم أعد المحاولة.';
   if (e is FirebaseException) {
     switch (e.code) {
       case 'permission-denied':
